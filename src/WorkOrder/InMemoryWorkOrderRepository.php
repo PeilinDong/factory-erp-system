@@ -16,6 +16,11 @@ final class InMemoryWorkOrderRepository implements WorkOrderRepository
         return array_values($this->orders);
     }
 
+    public function find(int $id): ?array
+    {
+        return $this->orders[$id] ?? null;
+    }
+
     public function create(array $data): array
     {
         $id = count($this->orders) + 1;
@@ -27,6 +32,19 @@ final class InMemoryWorkOrderRepository implements WorkOrderRepository
             'due_date' => $data['due_date'],
             'status' => $data['status'],
         ];
+        $this->orders[$id] = $order;
+
+        return $order;
+    }
+
+    public function setStatus(int $id, string $status): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \RuntimeException('work order not found');
+        }
+
+        $order['status'] = $status;
         $this->orders[$id] = $order;
 
         return $order;

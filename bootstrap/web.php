@@ -100,7 +100,7 @@ $materials = new MaterialController($materialService, $session, $redirector);
 $warehouses = new WarehouseController($warehouseService, $session, $redirector);
 $boms = new BomController($bomService, $materialService, $session, $redirector);
 $purchases = new PurchaseController($purchaseService, $materialService, $session, $redirector);
-$workOrders = new WorkOrderController($workOrderService, $bomService, $session, $redirector);
+$workOrders = new WorkOrderController($workOrderService, $bomService, $warehouseService, $inventoryService, $session, $redirector);
 $inventory = new InventoryController($inventoryService, $materialService, $warehouseService, $session, $redirector);
 $dashboard = new DashboardController($session, $redirector, $inventoryService);
 
@@ -124,6 +124,7 @@ $router->get('/purchases', [$purchases, 'index']);
 $router->post('/purchases', [$purchases, 'store']);
 $router->get('/work-orders', [$workOrders, 'index']);
 $router->post('/work-orders', [$workOrders, 'store']);
+$router->post('/work-orders/issue', [$workOrders, 'issue']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
 $router->get('/inventory/balances', [$inventory, 'balances']);

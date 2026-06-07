@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Erp\WorkOrder;
 
 use Erp\Bom\BomService;
+use Erp\Inventory\InventoryService;
 
 final class WorkOrderService
 {
@@ -20,6 +21,16 @@ final class WorkOrderService
     public function list(): array
     {
         return array_map($this->enrich(...), $this->orders->list());
+    }
+
+    /**
+     * @return null|array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
+     */
+    public function find(int $id): ?array
+    {
+        $order = $this->orders->find($id);
+
+        return $order === null ? null : $this->enrich($order);
     }
 
     /**
@@ -59,8 +70,38 @@ final class WorkOrderService
     }
 
     /**
+     * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}>
+     */
+    public function issueMaterials(int $id, int $warehouseId, InventoryService $inventory): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('work order must exist');
+        }
+
+        if ($warehouseId <= 0) {
+            throw new \InvalidArgumentException('warehouse must exist');
+        }
+
+        $transactions = [];
+        foreach ($order['requirements'] as $requirement) {
+            $transactions[] = $inventory->record([
+                'material_id' => (string) $requirement['component_material_id'],
+                'warehouse_id' => (string) $warehouseId,
+                'transaction_type' => 'outbound',
+                'quantity' => $requirement['required_quantity'],
+                'reference_no' => $order['order_no'],
+            ]);
+        }
+
+        $this->orders->setStatus($id, 'issued');
+
+        return $transactions;
+    }
+
+    /**
      * @param array{id:int,order_no:string,bom_id:int,planned_quantity:string,due_date:string,status:string} $order
-     * @return array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}
+     * @return array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
      */
     private function enrich(array $order): array
     {

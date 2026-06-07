@@ -24,6 +24,20 @@ final class PdoWorkOrderRepository implements WorkOrderRepository
         return array_map($this->mapRow(...), $statement->fetchAll());
     }
 
+    public function find(int $id): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, order_no, bom_id, planned_quantity, due_date, status
+             FROM work_orders
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $id]);
+        $row = $statement->fetch();
+
+        return is_array($row) ? $this->mapRow($row) : null;
+    }
+
     public function create(array $data): array
     {
         $statement = $this->pdo->prepare(
@@ -46,6 +60,17 @@ final class PdoWorkOrderRepository implements WorkOrderRepository
             'due_date' => $data['due_date'],
             'status' => $data['status'],
         ];
+    }
+
+    public function setStatus(int $id, string $status): array
+    {
+        $statement = $this->pdo->prepare('UPDATE work_orders SET status = :status WHERE id = :id');
+        $statement->execute([
+            'id' => $id,
+            'status' => $status,
+        ]);
+
+        return $this->find($id) ?? throw new \RuntimeException('work order not found');
     }
 
     /**

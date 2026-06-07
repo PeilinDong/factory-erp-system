@@ -1104,7 +1104,15 @@ final class FoundationTest extends TestCase
             'bom_id' => (string) $bom['id'],
             'planned_quantity' => '10',
         ]);
-        $controller = new WorkOrderController($workOrders, $bomService, $session, new InMemoryRedirector());
+        $warehouses = new InMemoryWarehouseRepository();
+        $controller = new WorkOrderController(
+            $workOrders,
+            $bomService,
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
+            $session,
+            new InMemoryRedirector(),
+        );
 
         $html = $controller->index();
 
@@ -1150,7 +1158,15 @@ final class FoundationTest extends TestCase
         ]);
         $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
         $redirector = new InMemoryRedirector();
-        $controller = new WorkOrderController($workOrders, $bomService, $session, $redirector);
+        $warehouses = new InMemoryWarehouseRepository();
+        $controller = new WorkOrderController(
+            $workOrders,
+            $bomService,
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
+            $session,
+            $redirector,
+        );
 
         $controller->store([
             'csrf_token' => $session->csrfToken(),
@@ -1162,6 +1178,122 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/work-orders?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($workOrders->list()));
+    }
+
+    public function testWorkOrderServiceIssuesMaterialsToInventory(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                    'scrap_rate' => '5',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $order = $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $transactions = $workOrders->issueMaterials($order['id'], $warehouse['id'], $inventory);
+
+        $this->assertSame(1, count($transactions));
+        $this->assertSame('outbound', $transactions[0]['transaction_type']);
+        $this->assertSame('21', $transactions[0]['quantity']);
+        $this->assertSame('WO-001', $transactions[0]['reference_no']);
+        $this->assertSame('-21', $inventory->stockBalance($component['id'], $warehouse['id']));
+        $this->assertSame('issued', $workOrders->list()[0]['status']);
+    }
+
+    public function testWorkOrderControllerIssuesMaterialsAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $order = $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '5',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $redirector = new InMemoryRedirector();
+        $controller = new WorkOrderController(
+            $workOrders,
+            $bomService,
+            new WarehouseService($warehouses),
+            $inventory,
+            $session,
+            $redirector,
+        );
+
+        $controller->issue([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $order['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+        ]);
+
+        $this->assertSame('/erp/work-orders?issued=1', $redirector->lastLocation());
+        $this->assertSame('-10', $inventory->stockBalance($component['id'], $warehouse['id']));
+        $this->assertSame('issued', $workOrders->list()[0]['status']);
     }
 
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void
