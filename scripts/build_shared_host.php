@@ -25,7 +25,7 @@ declare(strict_types=1);
 
 $router = require __DIR__ . '/_app/bootstrap/web.php';
 
-$basePath = '/erp';
+$basePath = \Erp\Core\App::basePath();
 $uri = $_SERVER['REQUEST_URI'] ?? '/';
 $path = parse_url($uri, PHP_URL_PATH) ?: '/';
 if ($basePath !== '' && str_starts_with($path, $basePath)) {
@@ -100,4 +100,3 @@ function removeDirectory(string $directory): void
     }
     rmdir($directory);
 }
-

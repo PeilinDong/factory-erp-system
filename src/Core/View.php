@@ -14,6 +14,8 @@ final class View
         $appName = htmlspecialchars($data['appName'] ?? 'Factory ERP', ENT_QUOTES, 'UTF-8');
         $title = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
 
+        $asset = htmlspecialchars(App::asset('/assets/app.css'), ENT_QUOTES, 'UTF-8');
+
         return <<<HTML
 <!doctype html>
 <html lang="zh-CN">
@@ -21,7 +23,7 @@ final class View
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{$title} - {$appName}</title>
-  <link rel="stylesheet" href="/erp/assets/app.css">
+  <link rel="stylesheet" href="{$asset}">
 </head>
 <body>
   {$body}
@@ -30,4 +32,3 @@ final class View
 HTML;
     }
 }
-

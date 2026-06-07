@@ -47,6 +47,12 @@ config/database.php
 
 Use `utf8mb4` for MariaDB.
 
+Set `base_path` in `config/app.php` to the public URL prefix. For the current server this is:
+
+```php
+'base_path' => '/erp',
+```
+
 ## Smoke Tests After Upload
 
 Open:

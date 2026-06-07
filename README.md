@@ -17,6 +17,9 @@ The current codebase is the first PHP foundation for the prepared shared-hosting
 - Routes for dashboard, login, and health check
 - Chinese login page for the ERP positioning
 - Database-backed administrator login
+- Protected dashboard routes with session login
+- CSRF protection for login and logout forms
+- Configurable deployment base path
 - CLI entrypoint: `bin/erpctl`
 - CLI commands: `health`, `migrate`, `create-admin`
 - MariaDB-compatible foundation migration definitions

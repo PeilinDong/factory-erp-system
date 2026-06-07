@@ -7,8 +7,13 @@ namespace Tests\Unit;
 use Erp\Cli\Application;
 use Erp\Auth\AuthService;
 use Erp\Auth\InMemoryUserRepository;
+use Erp\Auth\InMemorySessionStore;
+use Erp\Core\App;
 use Erp\Core\Config;
 use Erp\Core\Router;
+use Erp\Http\InMemoryRedirector;
+use Erp\Controller\AuthController;
+use Erp\Controller\DashboardController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -89,6 +94,111 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('中国中小制造企业', $html);
         $this->assertStringContains('登录', $html);
+    }
+
+    public function testAppBuildsUrlsFromConfiguredBasePath(): void
+    {
+        App::setBasePath('/custom');
+
+        $this->assertSame('/custom/login', App::url('/login'));
+        $this->assertSame('/custom/assets/app.css', App::asset('/assets/app.css'));
+
+        App::setBasePath('/erp');
+    }
+
+    public function testLoginFormContainsCsrfTokenAndConfiguredAction(): void
+    {
+        App::setBasePath('/custom');
+        $session = new InMemorySessionStore();
+        $controller = new AuthController(null, $session, new InMemoryRedirector());
+
+        $html = $controller->login();
+
+        $this->assertStringContains('name="csrf_token"', $html);
+        $this->assertStringContains('action="/custom/login"', $html);
+        $this->assertStringContains($session->csrfToken(), $html);
+
+        App::setBasePath('/erp');
+    }
+
+    public function testDashboardRedirectsGuestToLogin(): void
+    {
+        App::setBasePath('/erp');
+        $redirector = new InMemoryRedirector();
+        $controller = new DashboardController(new InMemorySessionStore(), $redirector);
+
+        $html = $controller->index();
+
+        $this->assertSame('', $html);
+        $this->assertSame('/erp/login', $redirector->lastLocation());
+    }
+
+    public function testLoginRejectsMissingCsrfToken(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $redirector = new InMemoryRedirector();
+        $auth = new AuthService(new InMemoryUserRepository([
+            [
+                'id' => 1,
+                'email' => 'admin@goenn.online',
+                'name' => '管理员',
+                'password_hash' => password_hash('CorrectPassword123', PASSWORD_DEFAULT),
+                'is_active' => 1,
+            ],
+        ]));
+        $controller = new AuthController($auth, $session, $redirector);
+
+        $controller->submit([
+            'email' => 'admin@goenn.online',
+            'password' => 'CorrectPassword123',
+        ]);
+
+        $this->assertSame('/erp/login?error=csrf', $redirector->lastLocation());
+        $this->assertSame(null, $session->user());
+    }
+
+    public function testLoginStoresUserAndRegeneratesSessionOnSuccess(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $token = $session->csrfToken();
+        $redirector = new InMemoryRedirector();
+        $auth = new AuthService(new InMemoryUserRepository([
+            [
+                'id' => 1,
+                'email' => 'admin@goenn.online',
+                'name' => '管理员',
+                'password_hash' => password_hash('CorrectPassword123', PASSWORD_DEFAULT),
+                'is_active' => 1,
+            ],
+        ]));
+        $controller = new AuthController($auth, $session, $redirector);
+
+        $controller->submit([
+            'email' => 'admin@goenn.online',
+            'password' => 'CorrectPassword123',
+            'csrf_token' => $token,
+        ]);
+
+        $this->assertSame('/erp/', $redirector->lastLocation());
+        $this->assertSame('admin@goenn.online', $session->user()['email']);
+        $this->assertSame(1, $session->regenerateCount());
+    }
+
+    public function testLogoutClearsSessionAndRedirectsToLogin(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $token = $session->csrfToken();
+        $redirector = new InMemoryRedirector();
+        $controller = new AuthController(null, $session, $redirector);
+
+        $controller->logout(['csrf_token' => $token]);
+
+        $this->assertSame(null, $session->user());
+        $this->assertSame('/erp/login', $redirector->lastLocation());
     }
 
     public function testAuthServiceAuthenticatesStoredPasswordHash(): void
