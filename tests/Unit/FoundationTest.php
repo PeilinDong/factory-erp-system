@@ -14,6 +14,9 @@ use Erp\Core\Router;
 use Erp\Http\InMemoryRedirector;
 use Erp\Controller\AuthController;
 use Erp\Controller\DashboardController;
+use Erp\Controller\MaterialController;
+use Erp\Material\InMemoryMaterialRepository;
+use Erp\Material\MaterialService;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -252,6 +255,83 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('Admin account validated for admin@goenn.online', $output);
         $this->assertStringContains('Password hash algorithm:', $output);
+    }
+
+    public function testMaterialServiceCreatesAndListsMaterials(): void
+    {
+        $repository = new InMemoryMaterialRepository();
+        $service = new MaterialService($repository);
+
+        $material = $service->create([
+            'code' => 'MAT-001',
+            'name' => '不锈钢螺丝',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+
+        $this->assertSame('MAT-001', $material['code']);
+        $this->assertSame('不锈钢螺丝', $material['name']);
+        $this->assertSame(1, count($service->list()));
+    }
+
+    public function testMaterialServiceRejectsInvalidMaterialCode(): void
+    {
+        $service = new MaterialService(new InMemoryMaterialRepository());
+
+        try {
+            $service->create([
+                'code' => '中文编码',
+                'name' => '测试物料',
+                'base_unit' => 'pcs',
+                'material_type' => 'purchased',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('物料编码', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected invalid material code to be rejected');
+    }
+
+    public function testMaterialPageRedirectsGuestToLogin(): void
+    {
+        App::setBasePath('/erp');
+        $redirector = new InMemoryRedirector();
+        $controller = new MaterialController(
+            new MaterialService(new InMemoryMaterialRepository()),
+            new InMemorySessionStore(),
+            $redirector,
+        );
+
+        $html = $controller->index();
+
+        $this->assertSame('', $html);
+        $this->assertSame('/erp/login', $redirector->lastLocation());
+    }
+
+    public function testMaterialPageShowsListAndCreateFormForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $repository = new InMemoryMaterialRepository();
+        $service = new MaterialService($repository);
+        $service->create([
+            'code' => 'MAT-001',
+            'name' => '不锈钢螺丝',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $controller = new MaterialController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('物料档案', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('name="csrf_token"', $html);
+        $this->assertStringContains('action="/erp/materials"', $html);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void

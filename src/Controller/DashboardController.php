@@ -33,12 +33,14 @@ final class DashboardController
         $logoutAction = htmlspecialchars(App::url('/logout'), ENT_QUOTES, 'UTF-8');
         $loginUrl = htmlspecialchars(App::url('/login'), ENT_QUOTES, 'UTF-8');
         $healthUrl = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
+        $materialsUrl = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $body = <<<HTML
 <main class="app-shell">
   <aside class="sidebar">
     <strong>Factory ERP</strong>
     <nav>
       <a href="#">仪表盘</a>
+      <a href="{$materialsUrl}">物料档案</a>
       <a href="{$loginUrl}">登录页</a>
       <a href="{$healthUrl}">健康检查</a>
     </nav>
@@ -60,7 +62,7 @@ final class DashboardController
     <section class="quick-panel">
       <h2>快捷入口</h2>
       <div class="quick-grid">
-        <a href="#">物料档案</a>
+        <a href="{$materialsUrl}">物料档案</a>
         <a href="#">BOM 管理</a>
         <a href="#">库存流水</a>
         <a href="#">生产工单</a>
