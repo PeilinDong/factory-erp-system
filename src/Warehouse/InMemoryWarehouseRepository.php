@@ -16,6 +16,19 @@ final class InMemoryWarehouseRepository implements WarehouseRepository
         return array_values($this->warehouses);
     }
 
+    public function search(string $query): array
+    {
+        $query = strtolower(trim($query));
+        if ($query === '') {
+            return $this->list();
+        }
+
+        return array_values(array_filter($this->warehouses, static function (array $warehouse) use ($query): bool {
+            return str_contains(strtolower($warehouse['code']), $query)
+                || str_contains(strtolower($warehouse['name']), $query);
+        }));
+    }
+
     public function create(array $data): array
     {
         $id = count($this->warehouses) + 1;

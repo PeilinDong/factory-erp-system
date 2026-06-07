@@ -30,9 +30,12 @@ final class MaterialController
         }
 
         $message = $this->message();
-        $rows = $this->materialRows($this->materials->list());
+        $query = trim((string) ($_GET['q'] ?? ''));
+        $rows = $this->materialRows($this->materials->search($query));
         $csrf = htmlspecialchars($session->csrfToken(), ENT_QUOTES, 'UTF-8');
         $action = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
+        $searchAction = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
+        $queryValue = htmlspecialchars($query, ENT_QUOTES, 'UTF-8');
 
         $body = <<<HTML
 <main class="app-shell">
@@ -42,6 +45,12 @@ final class MaterialController
     <h1>物料档案</h1>
     <p class="muted">维护生产、采购、库存共用的物料主数据。</p>
     {$message}
+    <section class="filter-panel">
+      <form class="search-form" method="get" action="{$searchAction}">
+        <label>搜索物料<input name="q" value="{$queryValue}" placeholder="编码、名称、规格"></label>
+        <button type="submit">搜索</button>
+      </form>
+    </section>
     <section class="form-panel">
       <h2>新增物料</h2>
       <form class="material-form" method="post" action="{$action}">
@@ -118,7 +127,7 @@ HTML;
         }
 
         if (isset($_GET['error'])) {
-            return '<p class="error">物料保存失败，请检查编码、名称、单位和属性是否正确。</p>';
+            return '<p class="error">物料保存失败，请检查编码、名称、单位和属性。</p>';
         }
 
         return '';
@@ -156,6 +165,9 @@ HTML;
     {
         $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
         $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
+        $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
+        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
@@ -164,10 +176,12 @@ HTML;
   <nav>
     <a href="{$home}">仪表盘</a>
     <a href="{$materials}">物料档案</a>
+    <a href="{$warehouses}">仓库档案</a>
+    <a href="{$inventory}">库存流水</a>
+    <a href="{$balances}">库存余额</a>
     <a href="{$health}">健康检查</a>
   </nav>
 </aside>
 HTML;
     }
 }
-

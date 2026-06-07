@@ -32,6 +32,33 @@ final class PdoMaterialRepository implements MaterialRepository
         ], $statement->fetchAll());
     }
 
+    public function search(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return $this->list();
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT id, code, name, specification, base_unit, material_type, is_active
+             FROM materials
+             WHERE code LIKE :query OR name LIKE :query OR specification LIKE :query
+             ORDER BY id DESC
+             LIMIT 100'
+        );
+        $statement->execute(['query' => '%' . $query . '%']);
+
+        return array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'code' => (string) $row['code'],
+            'name' => (string) $row['name'],
+            'specification' => (string) ($row['specification'] ?? ''),
+            'base_unit' => (string) $row['base_unit'],
+            'material_type' => (string) $row['material_type'],
+            'is_active' => (int) $row['is_active'],
+        ], $statement->fetchAll());
+    }
+
     public function create(array $data): array
     {
         $statement = $this->pdo->prepare(
@@ -57,4 +84,3 @@ final class PdoMaterialRepository implements MaterialRepository
         ];
     }
 }
-

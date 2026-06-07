@@ -19,6 +19,14 @@ final class WarehouseService
     }
 
     /**
+     * @return array<int, array{id:int,code:string,name:string,is_active:int}>
+     */
+    public function search(string $query): array
+    {
+        return $this->warehouses->search(trim($query));
+    }
+
+    /**
      * @param array<string, string> $data
      * @return array{id:int,code:string,name:string,is_active:int}
      */

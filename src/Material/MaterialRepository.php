@@ -12,9 +12,13 @@ interface MaterialRepository
     public function list(): array;
 
     /**
+     * @return array<int, array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}>
+     */
+    public function search(string $query): array;
+
+    /**
      * @param array{code:string,name:string,specification:string,base_unit:string,material_type:string} $data
      * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
      */
     public function create(array $data): array;
 }
-

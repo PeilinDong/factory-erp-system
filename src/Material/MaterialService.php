@@ -19,6 +19,14 @@ final class MaterialService
     }
 
     /**
+     * @return array<int, array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}>
+     */
+    public function search(string $query): array
+    {
+        return $this->materials->search(trim($query));
+    }
+
+    /**
      * @param array<string, string> $data
      * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
      */
@@ -55,4 +63,3 @@ final class MaterialService
         ]);
     }
 }
-

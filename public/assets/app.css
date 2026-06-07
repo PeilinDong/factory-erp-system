@@ -237,6 +237,7 @@ button:hover {
 }
 
 .form-panel,
+.filter-panel,
 .table-panel {
   margin-top: 24px;
   background: var(--panel);
@@ -249,6 +250,19 @@ button:hover {
 .table-panel h2 {
   margin: 0 0 16px;
   font-size: 18px;
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+@media (max-width: 760px) {
+  .search-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .material-form,

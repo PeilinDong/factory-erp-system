@@ -12,6 +12,11 @@ interface WarehouseRepository
     public function list(): array;
 
     /**
+     * @return array<int, array{id:int,code:string,name:string,is_active:int}>
+     */
+    public function search(string $query): array;
+
+    /**
      * @param array{code:string,name:string} $data
      * @return array{id:int,code:string,name:string,is_active:int}
      */

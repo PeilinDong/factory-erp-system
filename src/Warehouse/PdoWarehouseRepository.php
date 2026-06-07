@@ -29,6 +29,30 @@ final class PdoWarehouseRepository implements WarehouseRepository
         ], $statement->fetchAll());
     }
 
+    public function search(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return $this->list();
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT id, code, name, is_active
+             FROM warehouses
+             WHERE code LIKE :query OR name LIKE :query
+             ORDER BY id DESC
+             LIMIT 100'
+        );
+        $statement->execute(['query' => '%' . $query . '%']);
+
+        return array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'code' => (string) $row['code'],
+            'name' => (string) $row['name'],
+            'is_active' => (int) $row['is_active'],
+        ], $statement->fetchAll());
+    }
+
     public function create(array $data): array
     {
         $statement = $this->pdo->prepare(

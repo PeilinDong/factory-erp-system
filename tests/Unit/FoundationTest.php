@@ -357,6 +357,29 @@ final class FoundationTest extends TestCase
         throw new \RuntimeException('Expected invalid material code to be rejected');
     }
 
+    public function testMaterialServiceSearchesMaterialsByCodeNameAndSpecification(): void
+    {
+        $service = new MaterialService(new InMemoryMaterialRepository());
+        $service->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service->create([
+            'code' => 'MAT-002',
+            'name' => 'Copper Plate',
+            'specification' => 'T2',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+
+        $this->assertSame(1, count($service->search('screw')));
+        $this->assertSame(1, count($service->search('T2')));
+        $this->assertSame(2, count($service->search('')));
+    }
+
     public function testMaterialPageRedirectsGuestToLogin(): void
     {
         App::setBasePath('/erp');
@@ -428,6 +451,23 @@ final class FoundationTest extends TestCase
         }
 
         throw new \RuntimeException('Expected invalid warehouse code to be rejected');
+    }
+
+    public function testWarehouseServiceSearchesWarehousesByCodeAndName(): void
+    {
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $service->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $service->create([
+            'code' => 'WH-002',
+            'name' => 'Finished Goods',
+        ]);
+
+        $this->assertSame(1, count($service->search('main')));
+        $this->assertSame(1, count($service->search('WH-002')));
+        $this->assertSame(2, count($service->search('')));
     }
 
     public function testWarehousePageRedirectsGuestToLogin(): void

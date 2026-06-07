@@ -30,9 +30,12 @@ final class WarehouseController
         }
 
         $message = $this->message();
-        $rows = $this->warehouseRows($this->warehouses->list());
+        $query = trim((string) ($_GET['q'] ?? ''));
+        $rows = $this->warehouseRows($this->warehouses->search($query));
         $csrf = htmlspecialchars($session->csrfToken(), ENT_QUOTES, 'UTF-8');
         $action = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $searchAction = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $queryValue = htmlspecialchars($query, ENT_QUOTES, 'UTF-8');
 
         $body = <<<HTML
 <main class="app-shell">
@@ -42,6 +45,12 @@ final class WarehouseController
     <h1>仓库档案</h1>
     <p class="muted">维护采购、库存、生产领料共用的仓库主数据。</p>
     {$message}
+    <section class="filter-panel">
+      <form class="search-form" method="get" action="{$searchAction}">
+        <label>搜索仓库<input name="q" value="{$queryValue}" placeholder="编码、名称"></label>
+        <button type="submit">搜索</button>
+      </form>
+    </section>
     <section class="form-panel">
       <h2>新增仓库</h2>
       <form class="master-form" method="post" action="{$action}">
@@ -137,6 +146,8 @@ HTML;
         $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
         $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
+        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
@@ -146,6 +157,8 @@ HTML;
     <a href="{$home}">仪表盘</a>
     <a href="{$materials}">物料档案</a>
     <a href="{$warehouses}">仓库档案</a>
+    <a href="{$inventory}">库存流水</a>
+    <a href="{$balances}">库存余额</a>
     <a href="{$health}">健康检查</a>
   </nav>
 </aside>

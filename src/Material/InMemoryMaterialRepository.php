@@ -16,6 +16,20 @@ final class InMemoryMaterialRepository implements MaterialRepository
         return array_values($this->materials);
     }
 
+    public function search(string $query): array
+    {
+        $query = strtolower(trim($query));
+        if ($query === '') {
+            return $this->list();
+        }
+
+        return array_values(array_filter($this->materials, static function (array $material) use ($query): bool {
+            return str_contains(strtolower($material['code']), $query)
+                || str_contains(strtolower($material['name']), $query)
+                || str_contains(strtolower($material['specification']), $query);
+        }));
+    }
+
     public function create(array $data): array
     {
         $id = count($this->materials) + 1;
@@ -33,4 +47,3 @@ final class InMemoryMaterialRepository implements MaterialRepository
         return $material;
     }
 }
-
