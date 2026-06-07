@@ -41,7 +41,6 @@ if (is_file($appConfig)) {
 $router = new Router();
 $session = new NativeSessionStore();
 $redirector = new NativeRedirector();
-$dashboard = new DashboardController($session, $redirector);
 $authService = null;
 $materialService = null;
 $warehouseService = null;
@@ -73,6 +72,7 @@ $inventoryService ??= new InventoryService(
 $materials = new MaterialController($materialService, $session, $redirector);
 $warehouses = new WarehouseController($warehouseService, $session, $redirector);
 $inventory = new InventoryController($inventoryService, $materialService, $warehouseService, $session, $redirector);
+$dashboard = new DashboardController($session, $redirector, $inventoryService);
 
 $router->get('/', [$dashboard, 'index']);
 $router->get('/login', [$auth, 'login']);
@@ -84,6 +84,7 @@ $router->get('/warehouses', [$warehouses, 'index']);
 $router->post('/warehouses', [$warehouses, 'store']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
+$router->get('/inventory/balances', [$inventory, 'balances']);
 $router->get('/health', [$dashboard, 'health']);
 
 return $router;

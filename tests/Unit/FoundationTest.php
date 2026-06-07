@@ -159,6 +159,46 @@ final class FoundationTest extends TestCase
         $this->assertStringNotContains('Dashboard', $html);
     }
 
+    public function testDashboardShowsInventoryMetricsWhenInventoryServiceIsAvailable(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $inventory = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'outbound',
+            'quantity' => '2',
+        ]);
+        $controller = new DashboardController($session, new InMemoryRedirector(), $inventory);
+
+        $html = $controller->index();
+
+        $this->assertStringContains('库存余额', $html);
+        $this->assertStringContains('负库存预警', $html);
+        $this->assertStringContains('1 项', $html);
+        $this->assertStringContains('库存流水', $html);
+        $this->assertStringContains('1 条', $html);
+    }
+
     public function testLoginRejectsMissingCsrfToken(): void
     {
         App::setBasePath('/erp');
@@ -475,6 +515,11 @@ final class FoundationTest extends TestCase
 
         $this->assertSame(3, count($service->list()));
         $this->assertSame('8.5', $service->stockBalance($material['id'], $warehouse['id']));
+        $balances = $service->stockBalances();
+        $this->assertSame(1, count($balances));
+        $this->assertSame('MAT-001', $balances[0]['material_code']);
+        $this->assertSame('WH-001', $balances[0]['warehouse_code']);
+        $this->assertSame('8.5', $balances[0]['quantity']);
     }
 
     public function testInventoryServiceRejectsInvalidQuantity(): void
@@ -581,6 +626,57 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('WH-001', $html);
         $this->assertStringContains('PO-001', $html);
         $this->assertStringContains('action="/erp/inventory"', $html);
+    }
+
+    public function testInventoryBalancePageShowsCurrentStockForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $inventory = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '10',
+        ]);
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'outbound',
+            'quantity' => '4',
+        ]);
+        $controller = new InventoryController(
+            $inventory,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->balances();
+
+        $this->assertStringContains('库存余额', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('WH-001', $html);
+        $this->assertStringContains('6', $html);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void

@@ -83,6 +83,54 @@ final class InventoryService
     }
 
     /**
+     * @return array<int, array{material_id:int,material_code:string,material_name:string,warehouse_id:int,warehouse_code:string,warehouse_name:string,quantity:string}>
+     */
+    public function stockBalances(): array
+    {
+        $materials = $this->rowsById($this->materials->list());
+        $warehouses = $this->rowsById($this->warehouses->list());
+        $balances = [];
+
+        foreach ($this->transactions->list() as $transaction) {
+            $key = $transaction['material_id'] . ':' . $transaction['warehouse_id'];
+            $balances[$key] ??= [
+                'material_id' => $transaction['material_id'],
+                'warehouse_id' => $transaction['warehouse_id'],
+                'quantity' => 0.0,
+            ];
+
+            $quantity = (float) $transaction['quantity'];
+            $balances[$key]['quantity'] += $transaction['transaction_type'] === 'outbound'
+                ? -$quantity
+                : $quantity;
+        }
+
+        $rows = [];
+        foreach ($balances as $balance) {
+            if (abs($balance['quantity']) < 0.000001) {
+                continue;
+            }
+
+            $material = $materials[$balance['material_id']] ?? null;
+            $warehouse = $warehouses[$balance['warehouse_id']] ?? null;
+            $rows[] = [
+                'material_id' => $balance['material_id'],
+                'material_code' => (string) ($material['code'] ?? $balance['material_id']),
+                'material_name' => (string) ($material['name'] ?? ''),
+                'warehouse_id' => $balance['warehouse_id'],
+                'warehouse_code' => (string) ($warehouse['code'] ?? $balance['warehouse_id']),
+                'warehouse_name' => (string) ($warehouse['name'] ?? ''),
+                'quantity' => $this->normalizeQuantity((string) $balance['quantity']),
+            ];
+        }
+
+        usort($rows, static fn (array $left, array $right): int => [$left['material_code'], $left['warehouse_code']]
+            <=> [$right['material_code'], $right['warehouse_code']]);
+
+        return $rows;
+    }
+
+    /**
      * @param array<int, array{id:int}> $rows
      */
     private function existsIn(int $id, array $rows): bool
@@ -94,6 +142,20 @@ final class InventoryService
         }
 
         return false;
+    }
+
+    /**
+     * @param array<int, array{id:int}> $rows
+     * @return array<int, array{id:int}>
+     */
+    private function rowsById(array $rows): array
+    {
+        $indexed = [];
+        foreach ($rows as $row) {
+            $indexed[(int) $row['id']] = $row;
+        }
+
+        return $indexed;
     }
 
     private function normalizeQuantity(string $quantity): string

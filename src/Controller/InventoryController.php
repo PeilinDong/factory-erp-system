@@ -86,6 +86,37 @@ HTML;
         return View::page('库存流水', $body);
     }
 
+    public function balances(): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        $rows = $this->balanceRows($this->inventory->stockBalances());
+
+        $body = <<<HTML
+<main class="app-shell">
+  {$this->sidebar()}
+  <section class="content">
+    <p class="eyebrow">库存管理</p>
+    <h1>库存余额</h1>
+    <p class="muted">按物料和仓库汇总当前库存数量，为缺料预警、齐套检查和采购建议提供基础。</p>
+    <section class="table-panel">
+      <h2>余额列表</h2>
+      <table>
+        <thead><tr><th>物料编码</th><th>物料名称</th><th>仓库编码</th><th>仓库名称</th><th>当前库存</th></tr></thead>
+        <tbody>{$rows}</tbody>
+      </table>
+    </section>
+  </section>
+</main>
+HTML;
+
+        return View::page('库存余额', $body);
+    }
+
     /**
      * @param null|array<string, string> $input
      */
@@ -198,6 +229,25 @@ HTML;
     }
 
     /**
+     * @param array<int, array{material_id:int,material_code:string,material_name:string,warehouse_id:int,warehouse_code:string,warehouse_name:string,quantity:string}> $balances
+     */
+    private function balanceRows(array $balances): string
+    {
+        if ($balances === []) {
+            return '<tr><td colspan="5" class="empty">暂无库存余额，请先录入库存流水。</td></tr>';
+        }
+
+        return implode('', array_map(static fn (array $balance): string => sprintf(
+            '<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+            htmlspecialchars($balance['material_code'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($balance['material_name'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($balance['warehouse_code'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($balance['warehouse_name'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($balance['quantity'], ENT_QUOTES, 'UTF-8'),
+        ), $balances));
+    }
+
+    /**
      * @param array<int, array{id:int,code:string,name:string}> $rows
      * @return array<int, string>
      */
@@ -226,6 +276,7 @@ HTML;
         $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
         $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
+        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
@@ -236,6 +287,7 @@ HTML;
     <a href="{$materials}">物料档案</a>
     <a href="{$warehouses}">仓库档案</a>
     <a href="{$inventory}">库存流水</a>
+    <a href="{$balances}">库存余额</a>
     <a href="{$health}">健康检查</a>
   </nav>
 </aside>

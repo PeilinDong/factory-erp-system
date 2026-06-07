@@ -35,6 +35,8 @@ Implemented so far:
 - Material master page.
 - Warehouse master page.
 - Inventory transaction page for inbound, outbound, and adjustment records.
+- Stock balance page by material and warehouse.
+- Dashboard inventory metrics backed by inventory transactions.
 - MariaDB-compatible foundation migrations.
 - CLI entrypoint: `bin/erpctl`.
 - CLI commands: `health`, `migrate`, and `create-admin`.
@@ -143,11 +145,11 @@ See [ROADMAP.md](ROADMAP.md).
 
 Near-term priorities:
 
-1. Stock balance list by material and warehouse.
-2. Material and warehouse search, edit, and enable/disable actions.
-3. Excel import/export for master data.
-4. BOM foundation.
-5. Work order foundation.
+1. Material and warehouse search, edit, and enable/disable actions.
+2. Excel import/export for master data.
+3. BOM foundation.
+4. Work order foundation.
+5. Purchasing suggestions.
 
 ## Contributing
 
