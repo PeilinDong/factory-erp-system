@@ -301,6 +301,45 @@ th {
   text-align: center;
 }
 
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.row-actions a,
+.text-link {
+  color: var(--accent-dark);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.row-actions a:hover,
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.row-actions form {
+  margin: 0;
+}
+
+.link-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #991b1b;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  background: transparent;
+  color: #7f1d1d;
+  text-decoration: underline;
+}
+
 @media (max-width: 760px) {
   .table-panel {
     overflow-x: auto;

@@ -29,6 +29,11 @@ final class InMemoryWarehouseRepository implements WarehouseRepository
         }));
     }
 
+    public function find(int $id): ?array
+    {
+        return $this->warehouses[$id] ?? null;
+    }
+
     public function create(array $data): array
     {
         $id = count($this->warehouses) + 1;
@@ -38,6 +43,33 @@ final class InMemoryWarehouseRepository implements WarehouseRepository
             'name' => $data['name'],
             'is_active' => 1,
         ];
+        $this->warehouses[$id] = $warehouse;
+
+        return $warehouse;
+    }
+
+    public function update(int $id, array $data): array
+    {
+        $warehouse = $this->find($id);
+        if ($warehouse === null) {
+            throw new \RuntimeException('warehouse not found');
+        }
+
+        $warehouse['code'] = $data['code'];
+        $warehouse['name'] = $data['name'];
+        $this->warehouses[$id] = $warehouse;
+
+        return $warehouse;
+    }
+
+    public function setActive(int $id, bool $active): array
+    {
+        $warehouse = $this->find($id);
+        if ($warehouse === null) {
+            throw new \RuntimeException('warehouse not found');
+        }
+
+        $warehouse['is_active'] = $active ? 1 : 0;
         $this->warehouses[$id] = $warehouse;
 
         return $warehouse;

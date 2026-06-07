@@ -27,10 +27,52 @@ final class MaterialService
     }
 
     /**
+     * @return null|array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function find(int $id): ?array
+    {
+        return $this->materials->find($id);
+    }
+
+    /**
      * @param array<string, string> $data
      * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
      */
     public function create(array $data): array
+    {
+        return $this->materials->create($this->normalize($data));
+    }
+
+    /**
+     * @param array<string, string> $data
+     * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function update(int $id, array $data): array
+    {
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('物料不存在。');
+        }
+
+        return $this->materials->update($id, $this->normalize($data));
+    }
+
+    /**
+     * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function setActive(int $id, bool $active): array
+    {
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('物料不存在。');
+        }
+
+        return $this->materials->setActive($id, $active);
+    }
+
+    /**
+     * @param array<string, string> $data
+     * @return array{code:string,name:string,specification:string,base_unit:string,material_type:string}
+     */
+    private function normalize(array $data): array
     {
         $code = strtoupper(trim($data['code'] ?? ''));
         $name = trim($data['name'] ?? '');
@@ -39,7 +81,7 @@ final class MaterialService
         $materialType = trim($data['material_type'] ?? '');
 
         if (!preg_match('/^[A-Z0-9][A-Z0-9._-]{1,63}$/', $code)) {
-            throw new \InvalidArgumentException('物料编码只能使用字母、数字、点、下划线和短横线，长度 2-64 位。');
+            throw new \InvalidArgumentException('物料编码只能使用字母、数字、点、下划线和横线，长度 2-64 位。');
         }
 
         if ($name === '') {
@@ -54,12 +96,12 @@ final class MaterialService
             throw new \InvalidArgumentException('物料属性必须是采购件、自制件或委外件。');
         }
 
-        return $this->materials->create([
+        return [
             'code' => $code,
             'name' => $name,
             'specification' => $specification,
             'base_unit' => $baseUnit,
             'material_type' => $materialType,
-        ]);
+        ];
     }
 }

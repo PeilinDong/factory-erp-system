@@ -17,8 +17,24 @@ interface MaterialRepository
     public function search(string $query): array;
 
     /**
+     * @return null|array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function find(int $id): ?array;
+
+    /**
      * @param array{code:string,name:string,specification:string,base_unit:string,material_type:string} $data
      * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
      */
     public function create(array $data): array;
+
+    /**
+     * @param array{code:string,name:string,specification:string,base_unit:string,material_type:string} $data
+     * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function update(int $id, array $data): array;
+
+    /**
+     * @return array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}
+     */
+    public function setActive(int $id, bool $active): array;
 }

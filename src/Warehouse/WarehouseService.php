@@ -27,10 +27,52 @@ final class WarehouseService
     }
 
     /**
+     * @return null|array{id:int,code:string,name:string,is_active:int}
+     */
+    public function find(int $id): ?array
+    {
+        return $this->warehouses->find($id);
+    }
+
+    /**
      * @param array<string, string> $data
      * @return array{id:int,code:string,name:string,is_active:int}
      */
     public function create(array $data): array
+    {
+        return $this->warehouses->create($this->normalize($data));
+    }
+
+    /**
+     * @param array<string, string> $data
+     * @return array{id:int,code:string,name:string,is_active:int}
+     */
+    public function update(int $id, array $data): array
+    {
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('warehouse not found');
+        }
+
+        return $this->warehouses->update($id, $this->normalize($data));
+    }
+
+    /**
+     * @return array{id:int,code:string,name:string,is_active:int}
+     */
+    public function setActive(int $id, bool $active): array
+    {
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('warehouse not found');
+        }
+
+        return $this->warehouses->setActive($id, $active);
+    }
+
+    /**
+     * @param array<string, string> $data
+     * @return array{code:string,name:string}
+     */
+    private function normalize(array $data): array
     {
         $code = strtoupper(trim($data['code'] ?? ''));
         $name = trim($data['name'] ?? '');
@@ -43,9 +85,9 @@ final class WarehouseService
             throw new \InvalidArgumentException('warehouse name must not be empty');
         }
 
-        return $this->warehouses->create([
+        return [
             'code' => $code,
             'name' => $name,
-        ]);
+        ];
     }
 }

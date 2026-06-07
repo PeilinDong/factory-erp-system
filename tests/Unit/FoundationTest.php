@@ -380,6 +380,36 @@ final class FoundationTest extends TestCase
         $this->assertSame(2, count($service->search('')));
     }
 
+    public function testMaterialServiceUpdatesAndTogglesMaterialStatus(): void
+    {
+        $service = new MaterialService(new InMemoryMaterialRepository());
+        $material = $service->create([
+            'code' => 'mat-001',
+            'name' => '旧物料',
+            'specification' => 'M6',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+
+        $updated = $service->update($material['id'], [
+            'code' => 'mat-002',
+            'name' => '新物料',
+            'specification' => 'M8',
+            'base_unit' => 'kg',
+            'material_type' => 'manufactured',
+        ]);
+        $inactive = $service->setActive($material['id'], false);
+        $active = $service->setActive($material['id'], true);
+
+        $this->assertSame('MAT-002', $updated['code']);
+        $this->assertSame('新物料', $updated['name']);
+        $this->assertSame('M8', $updated['specification']);
+        $this->assertSame('kg', $updated['base_unit']);
+        $this->assertSame('manufactured', $updated['material_type']);
+        $this->assertSame(0, $inactive['is_active']);
+        $this->assertSame(1, $active['is_active']);
+    }
+
     public function testMaterialPageRedirectsGuestToLogin(): void
     {
         App::setBasePath('/erp');
@@ -418,6 +448,85 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('name="csrf_token"', $html);
         $this->assertStringContains('action="/erp/materials"', $html);
+    }
+
+    public function testMaterialPageProvidesEditAndStatusActions(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new MaterialService(new InMemoryMaterialRepository());
+        $service->create([
+            'code' => 'MAT-001',
+            'name' => '钢螺丝',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $controller = new MaterialController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('编辑', $html);
+        $this->assertStringContains('停用', $html);
+        $this->assertStringContains('href="/erp/materials/edit?id=1"', $html);
+        $this->assertStringContains('action="/erp/materials/status"', $html);
+    }
+
+    public function testMaterialControllerUpdatesMaterialAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new MaterialService(new InMemoryMaterialRepository());
+        $material = $service->create([
+            'code' => 'MAT-001',
+            'name' => '旧物料',
+            'specification' => 'M6',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $redirector = new InMemoryRedirector();
+        $controller = new MaterialController($service, $session, $redirector);
+
+        $controller->update([
+            'id' => (string) $material['id'],
+            'csrf_token' => $session->csrfToken(),
+            'code' => 'MAT-002',
+            'name' => '新物料',
+            'specification' => 'M8',
+            'base_unit' => 'kg',
+            'material_type' => 'manufactured',
+        ]);
+
+        $this->assertSame('/erp/materials?updated=1', $redirector->lastLocation());
+        $this->assertSame('新物料', $service->list()[0]['name']);
+    }
+
+    public function testMaterialControllerTogglesMaterialStatusAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new MaterialService(new InMemoryMaterialRepository());
+        $material = $service->create([
+            'code' => 'MAT-001',
+            'name' => '钢螺丝',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $redirector = new InMemoryRedirector();
+        $controller = new MaterialController($service, $session, $redirector);
+
+        $controller->status([
+            'id' => (string) $material['id'],
+            'is_active' => '0',
+            'csrf_token' => $session->csrfToken(),
+        ]);
+
+        $this->assertSame('/erp/materials?status=1', $redirector->lastLocation());
+        $this->assertSame(0, $service->list()[0]['is_active']);
     }
 
     public function testWarehouseServiceCreatesAndListsWarehouses(): void
@@ -470,6 +579,27 @@ final class FoundationTest extends TestCase
         $this->assertSame(2, count($service->search('')));
     }
 
+    public function testWarehouseServiceUpdatesAndTogglesWarehouseStatus(): void
+    {
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $warehouse = $service->create([
+            'code' => 'wh-001',
+            'name' => '旧仓库',
+        ]);
+
+        $updated = $service->update($warehouse['id'], [
+            'code' => 'wh-002',
+            'name' => '新仓库',
+        ]);
+        $inactive = $service->setActive($warehouse['id'], false);
+        $active = $service->setActive($warehouse['id'], true);
+
+        $this->assertSame('WH-002', $updated['code']);
+        $this->assertSame('新仓库', $updated['name']);
+        $this->assertSame(0, $inactive['is_active']);
+        $this->assertSame(1, $active['is_active']);
+    }
+
     public function testWarehousePageRedirectsGuestToLogin(): void
     {
         App::setBasePath('/erp');
@@ -508,6 +638,73 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/warehouses"', $html);
         $this->assertStringNotContains('Warehouse Master', $html);
         $this->assertStringNotContains('Save Warehouse', $html);
+    }
+
+    public function testWarehousePageProvidesEditAndStatusActions(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $service->create([
+            'code' => 'WH-001',
+            'name' => '主仓库',
+        ]);
+        $controller = new WarehouseController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('编辑', $html);
+        $this->assertStringContains('停用', $html);
+        $this->assertStringContains('href="/erp/warehouses/edit?id=1"', $html);
+        $this->assertStringContains('action="/erp/warehouses/status"', $html);
+    }
+
+    public function testWarehouseControllerUpdatesWarehouseAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $warehouse = $service->create([
+            'code' => 'WH-001',
+            'name' => '旧仓库',
+        ]);
+        $redirector = new InMemoryRedirector();
+        $controller = new WarehouseController($service, $session, $redirector);
+
+        $controller->update([
+            'id' => (string) $warehouse['id'],
+            'csrf_token' => $session->csrfToken(),
+            'code' => 'WH-002',
+            'name' => '新仓库',
+        ]);
+
+        $this->assertSame('/erp/warehouses?updated=1', $redirector->lastLocation());
+        $this->assertSame('新仓库', $service->list()[0]['name']);
+    }
+
+    public function testWarehouseControllerTogglesWarehouseStatusAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $warehouse = $service->create([
+            'code' => 'WH-001',
+            'name' => '主仓库',
+        ]);
+        $redirector = new InMemoryRedirector();
+        $controller = new WarehouseController($service, $session, $redirector);
+
+        $controller->status([
+            'id' => (string) $warehouse['id'],
+            'is_active' => '0',
+            'csrf_token' => $session->csrfToken(),
+        ]);
+
+        $this->assertSame('/erp/warehouses?status=1', $redirector->lastLocation());
+        $this->assertSame(0, $service->list()[0]['is_active']);
     }
 
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void

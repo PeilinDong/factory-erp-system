@@ -30,6 +30,11 @@ final class InMemoryMaterialRepository implements MaterialRepository
         }));
     }
 
+    public function find(int $id): ?array
+    {
+        return $this->materials[$id] ?? null;
+    }
+
     public function create(array $data): array
     {
         $id = count($this->materials) + 1;
@@ -42,6 +47,36 @@ final class InMemoryMaterialRepository implements MaterialRepository
             'material_type' => $data['material_type'],
             'is_active' => 1,
         ];
+        $this->materials[$id] = $material;
+
+        return $material;
+    }
+
+    public function update(int $id, array $data): array
+    {
+        $material = $this->find($id);
+        if ($material === null) {
+            throw new \RuntimeException('material not found');
+        }
+
+        $material['code'] = $data['code'];
+        $material['name'] = $data['name'];
+        $material['specification'] = $data['specification'] ?? '';
+        $material['base_unit'] = $data['base_unit'];
+        $material['material_type'] = $data['material_type'];
+        $this->materials[$id] = $material;
+
+        return $material;
+    }
+
+    public function setActive(int $id, bool $active): array
+    {
+        $material = $this->find($id);
+        if ($material === null) {
+            throw new \RuntimeException('material not found');
+        }
+
+        $material['is_active'] = $active ? 1 : 0;
         $this->materials[$id] = $material;
 
         return $material;
