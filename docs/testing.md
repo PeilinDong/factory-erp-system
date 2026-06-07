@@ -26,6 +26,9 @@ Current tests verify:
 10. Configured base-path URL generation.
 11. CSRF-protected login and logout.
 12. Guest redirect from protected dashboard pages.
+13. Dashboard links only expose implemented modules and avoid dead links.
+14. Material master creation, validation, and protected page rendering.
+15. Warehouse master creation, validation, and protected page rendering.
 
 ## Verification Commands
 

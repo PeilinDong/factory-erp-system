@@ -1,38 +1,108 @@
 # Factory ERP System
 
-Factory ERP System is an open-source ERP project for Chinese small and medium manufacturing companies. The first implementation phase focuses on production material control: materials, BOM, inventory, MRP readiness checks, purchasing suggestions, work orders, issue/return material flows, traceability, and basic cost visibility.
+Factory ERP System is an early-alpha open-source ERP project for small and medium manufacturing companies, with an initial focus on Chinese factory workflows.
 
-The current codebase is the first PHP foundation for the prepared shared-hosting environment:
+The project aims to provide a lightweight PHP and MariaDB foundation for material management, warehouse management, BOM, inventory transactions, purchasing suggestions, work orders, traceability, and basic cost visibility.
+
+This repository is not production-ready. It is an early foundation intended for open development, testing, and feedback.
+
+## Why This Project Exists
+
+Many small and medium factories still rely on spreadsheets, manual handoffs, and disconnected tools for daily production and material control. Full ERP products can be expensive, complex, or difficult to adapt to factory-specific workflows.
+
+Factory ERP System is intended to grow into a practical, inspectable, and self-hostable ERP foundation that smaller manufacturers can understand, modify, and extend.
+
+## Target Users
+
+- Small and medium manufacturing companies.
+- Factory owners and operations managers who need better material visibility.
+- Production planners and warehouse staff who need clearer inventory movement records.
+- Developers and implementation partners who want a lightweight ERP base for custom factory workflows.
+- Open-source contributors interested in manufacturing software, PHP, MariaDB, and business systems.
+
+## Current Status
+
+Early alpha.
+
+Implemented so far:
+
+- PHP 8.3 application foundation without Composer dependency.
+- Lightweight autoloader and router.
+- Web front controller at `public/index.php`.
+- Database-backed administrator login.
+- Session protection and CSRF checks.
+- Protected dashboard.
+- Material master page.
+- Warehouse master page.
+- MariaDB-compatible foundation migrations.
+- CLI entrypoint: `bin/erpctl`.
+- CLI commands: `health`, `migrate`, and `create-admin`.
+- Shared-hosting deployment package builder.
+- Custom PHP test runner.
+
+Not implemented yet:
+
+- BOM management.
+- Inventory inbound, outbound, and adjustment transactions.
+- Purchasing suggestions.
+- Production work orders.
+- Traceability reports.
+- Cost reports.
+- Permission management beyond the initial administrator foundation.
+- Production hardening, installer flow, and upgrade tooling.
+
+## Technology
 
 - PHP 8.3
+- MariaDB 10.5 compatible SQL
 - Apache 2.4
-- MariaDB 10.5
-- Deployable under `/erp/`
-- No Composer dependency required for the first foundation
+- Plain PHP architecture
+- Custom test runner
+- Shared-hosting friendly deployment
 
-## Current Features
+The project intentionally starts with a small dependency footprint so it can run in constrained hosting environments while the domain model is still being shaped.
 
-- Lightweight PSR-4-style autoloader
-- Web front controller at `public/index.php`
-- Routes for dashboard, login, and health check
-- Chinese login page for the ERP positioning
-- Database-backed administrator login
-- Protected dashboard routes with session login
-- CSRF protection for login and logout forms
-- Configurable deployment base path
-- CLI entrypoint: `bin/erpctl`
-- CLI commands: `health`, `migrate`, `create-admin`
-- MariaDB-compatible foundation migration definitions
-- Custom PHP test runner
+## Installation
 
-## Quick Start
-
-Copy example config files before connecting a real database:
+Copy example config files:
 
 ```powershell
 Copy-Item config/app.example.php config/app.php
 Copy-Item config/database.example.php config/database.php
 ```
+
+Edit:
+
+```text
+config/app.php
+config/database.php
+```
+
+Run migration after database configuration is available:
+
+```powershell
+php bin/erpctl migrate
+```
+
+Create an administrator:
+
+```powershell
+php bin/erpctl create-admin --email=admin@example.com --password=ChangeThisPassword123
+```
+
+Run a local server:
+
+```powershell
+php -S 127.0.0.1:8080 -t public
+```
+
+Open:
+
+```text
+http://127.0.0.1:8080/login
+```
+
+## Development
 
 Run tests:
 
@@ -40,34 +110,56 @@ Run tests:
 php tests/run.php
 ```
 
-Run CLI health check:
+Run a CLI health check:
 
 ```powershell
 php bin/erpctl health
 ```
 
-After database configuration is available, run migrations and create an administrator:
+Run a migration dry run:
 
 ```powershell
-php bin/erpctl migrate
-php bin/erpctl create-admin --email=admin@example.com --password=ChangeThisPassword123
+php bin/erpctl migrate --dry-run
 ```
 
-Run local web server:
+Build a shared-hosting deployment package:
 
 ```powershell
-php -S 127.0.0.1:8080 -t public
+php scripts/build_shared_host.php
 ```
 
-Then open:
+More details:
 
-```text
-http://127.0.0.1:8080/login
-```
+- [Development Guide](docs/development.md)
+- [Testing Guide](docs/testing.md)
+- [Deployment Guide](docs/deployment.md)
 
-## Documentation
+## Roadmap
 
-- [Development](docs/development.md)
-- [Testing](docs/testing.md)
-- [Deployment](docs/deployment.md)
-- [MVP Design](docs/superpowers/specs/2026-06-07-china-manufacturing-erp-mvp-design.md)
+The roadmap is intentionally phased because ERP systems become risky when too many business modules are built before the data foundation is stable.
+
+See [ROADMAP.md](ROADMAP.md).
+
+Near-term priorities:
+
+1. Inventory inbound, outbound, and adjustment transactions.
+2. Stock balance calculation by material and warehouse.
+3. Material and warehouse search, edit, and enable/disable actions.
+4. BOM foundation.
+5. Work order foundation.
+
+## Contributing
+
+Contributions are welcome, especially in the areas of manufacturing workflows, PHP/MariaDB implementation, tests, documentation, and Chinese ERP localization.
+
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening issues or pull requests.
+
+## OpenAI Codex For Open Source Application
+
+This repository includes an application note describing why the project matters and how Codex can help accelerate open-source development:
+
+- [docs/openai-codex-oss-application.md](docs/openai-codex-oss-application.md)
+
+## License
+
+MIT. See [LICENSE](LICENSE).

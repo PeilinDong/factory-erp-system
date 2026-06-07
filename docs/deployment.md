@@ -65,7 +65,7 @@ https://www.goenn.online/erp/health
 Expected:
 
 - `/login` shows the Chinese ERP login page.
-- `/health` returns `Factory ERP OK`.
+- `/health` returns `Factory ERP 正常`.
 
 ## Operational CLI
 

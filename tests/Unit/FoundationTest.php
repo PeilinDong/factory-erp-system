@@ -150,7 +150,9 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('href="/erp/materials"', $html);
         $this->assertStringContains('href="/erp/warehouses"', $html);
+        $this->assertStringContains('仓库档案', $html);
         $this->assertStringNotContains('href="#"', $html);
+        $this->assertStringNotContains('Dashboard', $html);
     }
 
     public function testLoginRejectsMissingCsrfToken(): void
@@ -414,10 +416,14 @@ final class FoundationTest extends TestCase
 
         $html = $controller->index();
 
-        $this->assertStringContains('Warehouse Master', $html);
+        $this->assertStringContains('仓库档案', $html);
+        $this->assertStringContains('新增仓库', $html);
+        $this->assertStringContains('保存仓库', $html);
         $this->assertStringContains('WH-001', $html);
         $this->assertStringContains('name="csrf_token"', $html);
         $this->assertStringContains('action="/erp/warehouses"', $html);
+        $this->assertStringNotContains('Warehouse Master', $html);
+        $this->assertStringNotContains('Save Warehouse', $html);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void
