@@ -12,15 +12,29 @@ The prepared target environment is:
 
 Do not commit FTP, database, or administrator passwords. Keep them in local-only notes or local config files.
 
+## Build Deploy Package
+
+Create a shared-hosting package:
+
+```powershell
+php scripts/build_shared_host.php
+```
+
+The package is written to:
+
+```text
+build/shared-host/
+```
+
 ## Files To Upload
 
-Upload the project contents except local-only files ignored by Git. The server web path should expose the contents of `public/` under:
+Upload the contents of `build/shared-host/` to the FTP directory that maps to:
 
 ```text
 https://www.goenn.online/erp/
 ```
 
-If the hosting panel maps `/erp/` to a directory, place files so that `public/index.php` is the web entrypoint. If the host cannot set `public/` as document root, copy the contents of `public/` into the web-visible `/erp/` directory and keep `src/`, `bootstrap/`, `config/`, `database/`, and `storage/` outside the public directory when the host allows it.
+The deploy package keeps public files in the web root and moves application code into `_app/`. `_app/.htaccess` blocks direct HTTP access to internal code on Apache.
 
 ## Server Configuration
 
@@ -57,4 +71,3 @@ On the server, use PHP 8.3 CLI when available:
 ```
 
 Database-backed migration execution will be added after the first schema connection layer is implemented.
-

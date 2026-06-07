@@ -4,6 +4,7 @@ config/app.php
 config/database.php
 
 # Runtime files
+build/
 storage/cache/*
 storage/logs/*
 !storage/cache/.gitkeep
@@ -12,4 +13,3 @@ storage/logs/*
 # Local tooling
 .phpunit.result.cache
 .env
-

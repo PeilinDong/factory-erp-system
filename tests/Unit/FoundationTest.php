@@ -86,4 +86,42 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('中国中小制造企业', $html);
         $this->assertStringContains('登录', $html);
     }
+
+    public function testSharedHostBuildCreatesSafeDeployLayout(): void
+    {
+        $root = dirname(__DIR__, 2);
+        $output = $root . '/storage/cache/test-shared-host-build';
+        $this->removeDirectory($output);
+
+        $php = PHP_BINARY;
+        $command = escapeshellarg($php) . ' '
+            . escapeshellarg($root . '/scripts/build_shared_host.php') . ' --output='
+            . escapeshellarg($output);
+        exec($command, $lines, $exitCode);
+
+        $this->assertSame(0, $exitCode, implode("\n", $lines));
+        $this->assertTrue(is_file($output . '/index.php'), 'Expected public index in deploy root');
+        $this->assertTrue(is_file($output . '/.htaccess'), 'Expected root htaccess in deploy root');
+        $this->assertTrue(is_dir($output . '/assets'), 'Expected assets in deploy root');
+        $this->assertTrue(is_dir($output . '/_app/bootstrap'), 'Expected bootstrap in internal app directory');
+        $this->assertTrue(is_dir($output . '/_app/src'), 'Expected source in internal app directory');
+        $this->assertStringContains('_app/bootstrap/web.php', file_get_contents($output . '/index.php') ?: '');
+        $this->assertStringContains('Require all denied', file_get_contents($output . '/_app/.htaccess') ?: '');
+
+        $this->removeDirectory($output);
+    }
+
+    private function removeDirectory(string $directory): void
+    {
+        if (!is_dir($directory)) {
+            return;
+        }
+
+        $items = array_diff(scandir($directory) ?: [], ['.', '..']);
+        foreach ($items as $item) {
+            $path = $directory . DIRECTORY_SEPARATOR . $item;
+            is_dir($path) ? $this->removeDirectory($path) : unlink($path);
+        }
+        rmdir($directory);
+    }
 }
