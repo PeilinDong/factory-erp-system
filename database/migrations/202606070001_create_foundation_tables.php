@@ -8,6 +8,8 @@ return [
         'users',
         'materials',
         'warehouses',
+        'boms',
+        'bom_items',
         'inventory_transactions',
     ],
     'sql' => [
@@ -45,6 +47,23 @@ return [
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS boms (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            parent_material_id BIGINT UNSIGNED NOT NULL,
+            version VARCHAR(64) NOT NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_boms_parent_material FOREIGN KEY (parent_material_id) REFERENCES materials(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS bom_items (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            bom_id BIGINT UNSIGNED NOT NULL,
+            component_material_id BIGINT UNSIGNED NOT NULL,
+            quantity DECIMAL(18, 6) NOT NULL,
+            scrap_rate DECIMAL(9, 4) NOT NULL DEFAULT 0,
+            CONSTRAINT fk_bom_items_bom FOREIGN KEY (bom_id) REFERENCES boms(id),
+            CONSTRAINT fk_bom_items_component_material FOREIGN KEY (component_material_id) REFERENCES materials(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS inventory_transactions (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             material_id BIGINT UNSIGNED NOT NULL,
@@ -59,4 +78,3 @@ return [
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
     ],
 ];
-

@@ -38,6 +38,7 @@ final class DashboardController
         $healthUrl = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
         $materialsUrl = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehousesUrl = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $bomsUrl = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
         $inventoryUrl = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balancesUrl = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
 
@@ -49,6 +50,7 @@ final class DashboardController
       <a href="{$homeUrl}">仪表盘</a>
       <a href="{$materialsUrl}">物料档案</a>
       <a href="{$warehousesUrl}">仓库档案</a>
+      <a href="{$bomsUrl}">BOM 管理</a>
       <a href="{$inventoryUrl}">库存流水</a>
       <a href="{$balancesUrl}">库存余额</a>
       <a href="{$healthUrl}">健康检查</a>
@@ -60,7 +62,7 @@ final class DashboardController
   </aside>
   <section class="content">
     <p class="eyebrow">生产工作台</p>
-    <h1>今天需要关注的业务</h1>
+    <h1>今天需要关注的运营状态</h1>
     <p class="muted">当前用户：{$name}</p>
     <div class="metric-grid">
       <article><span>库存余额</span><strong>{$metrics['balance_count']} 项</strong></article>
@@ -68,15 +70,15 @@ final class DashboardController
       <article><span>库存流水</span><strong>{$metrics['transaction_count']} 条</strong></article>
       <article><span>待完工入库</span><strong>0 张</strong></article>
     </div>
-    <p class="muted empty-note">库存指标已根据库存流水实时汇总，BOM、工单和采购建议将在后续模块接入。</p>
+    <p class="muted empty-note">库存指标已根据库存流水实时汇总，BOM 管理已接入，工单和采购建议将在后续模块继续补齐。</p>
     <section class="quick-panel">
       <h2>快捷入口</h2>
       <div class="quick-grid">
         <a href="{$materialsUrl}">物料档案</a>
         <a href="{$warehousesUrl}">仓库档案</a>
+        <a href="{$bomsUrl}">BOM 管理</a>
         <a href="{$inventoryUrl}">库存流水</a>
         <a href="{$balancesUrl}">库存余额</a>
-        <span class="disabled-link">BOM 管理 <small>开发中</small></span>
         <span class="disabled-link">生产工单 <small>开发中</small></span>
       </div>
     </section>

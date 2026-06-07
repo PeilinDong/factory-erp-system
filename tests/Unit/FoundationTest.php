@@ -23,6 +23,9 @@ use Erp\Controller\WarehouseController;
 use Erp\Controller\InventoryController;
 use Erp\Inventory\InMemoryInventoryTransactionRepository;
 use Erp\Inventory\InventoryService;
+use Erp\Bom\BomService;
+use Erp\Bom\InMemoryBomRepository;
+use Erp\Controller\BomController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -93,6 +96,8 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('roles', $output);
         $this->assertStringContains('materials', $output);
         $this->assertStringContains('inventory_transactions', $output);
+        $this->assertStringContains('boms', $output);
+        $this->assertStringContains('bom_items', $output);
     }
 
     public function testLoginPageContainsChineseProductPositioning(): void
@@ -705,6 +710,160 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/warehouses?status=1', $redirector->lastLocation());
         $this->assertSame(0, $service->list()[0]['is_active']);
+    }
+
+    public function testBomServiceCreatesBomWithComponentsAndCalculatesRequirements(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+
+        $bom = $service->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2.5',
+                    'scrap_rate' => '10',
+                ],
+            ],
+        ]);
+        $requirements = $service->requirements($bom['id'], '4');
+
+        $this->assertSame('FG-001', $bom['parent_material_code']);
+        $this->assertSame('MAT-001', $bom['items'][0]['component_material_code']);
+        $this->assertSame('2.5', $bom['items'][0]['quantity']);
+        $this->assertSame('11', $requirements[0]['required_quantity']);
+    }
+
+    public function testBomServiceRejectsParentMaterialAsComponent(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+
+        try {
+            $service->create([
+                'parent_material_id' => (string) $parent['id'],
+                'version' => 'v1',
+                'items' => [
+                    [
+                        'component_material_id' => (string) $parent['id'],
+                        'quantity' => '1',
+                    ],
+                ],
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('component', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected BOM to reject parent as component');
+    }
+
+    public function testBomPageShowsListAndCreateFormForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+        $service->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $controller = new BomController(
+            $service,
+            new MaterialService($materials),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->index();
+
+        $this->assertStringContains('BOM 管理', $html);
+        $this->assertStringContains('新增 BOM', $html);
+        $this->assertStringContains('FG-001', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('action="/erp/boms"', $html);
+        $this->assertStringContains('name="component_material_id"', $html);
+    }
+
+    public function testBomControllerStoresBomAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+        $redirector = new InMemoryRedirector();
+        $controller = new BomController($service, new MaterialService($materials), $session, $redirector);
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'component_material_id' => (string) $component['id'],
+            'quantity' => '3',
+            'scrap_rate' => '5',
+        ]);
+
+        $this->assertSame('/erp/boms?created=1', $redirector->lastLocation());
+        $this->assertSame(1, count($service->list()));
     }
 
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void
