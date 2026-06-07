@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Erp\Controller\AuthController;
 use Erp\Controller\DashboardController;
+use Erp\Controller\InventoryController;
 use Erp\Controller\MaterialController;
 use Erp\Controller\WarehouseController;
 use Erp\Auth\AuthService;
@@ -14,6 +15,9 @@ use Erp\Core\Autoloader;
 use Erp\Core\Router;
 use Erp\Database\Database;
 use Erp\Http\NativeRedirector;
+use Erp\Inventory\InMemoryInventoryTransactionRepository;
+use Erp\Inventory\InventoryService;
+use Erp\Inventory\PdoInventoryTransactionRepository;
 use Erp\Material\InMemoryMaterialRepository;
 use Erp\Material\MaterialService;
 use Erp\Material\PdoMaterialRepository;
@@ -41,16 +45,34 @@ $dashboard = new DashboardController($session, $redirector);
 $authService = null;
 $materialService = null;
 $warehouseService = null;
+$inventoryService = null;
 $databaseConfig = dirname(__DIR__) . '/config/database.php';
 if (is_file($databaseConfig)) {
     $pdo = Database::fromConfigFile($databaseConfig);
     $authService = new AuthService(new PdoUserRepository($pdo));
-    $materialService = new MaterialService(new PdoMaterialRepository($pdo));
-    $warehouseService = new WarehouseService(new PdoWarehouseRepository($pdo));
+    $materialRepository = new PdoMaterialRepository($pdo);
+    $warehouseRepository = new PdoWarehouseRepository($pdo);
+    $materialService = new MaterialService($materialRepository);
+    $warehouseService = new WarehouseService($warehouseRepository);
+    $inventoryService = new InventoryService(
+        new PdoInventoryTransactionRepository($pdo),
+        $materialRepository,
+        $warehouseRepository,
+    );
 }
 $auth = new AuthController($authService, $session, $redirector);
-$materials = new MaterialController($materialService ?? new MaterialService(new InMemoryMaterialRepository()), $session, $redirector);
-$warehouses = new WarehouseController($warehouseService ?? new WarehouseService(new InMemoryWarehouseRepository()), $session, $redirector);
+$materialRepository ??= new InMemoryMaterialRepository();
+$warehouseRepository ??= new InMemoryWarehouseRepository();
+$materialService ??= new MaterialService($materialRepository);
+$warehouseService ??= new WarehouseService($warehouseRepository);
+$inventoryService ??= new InventoryService(
+    new InMemoryInventoryTransactionRepository(),
+    $materialRepository,
+    $warehouseRepository,
+);
+$materials = new MaterialController($materialService, $session, $redirector);
+$warehouses = new WarehouseController($warehouseService, $session, $redirector);
+$inventory = new InventoryController($inventoryService, $materialService, $warehouseService, $session, $redirector);
 
 $router->get('/', [$dashboard, 'index']);
 $router->get('/login', [$auth, 'login']);
@@ -60,6 +82,8 @@ $router->get('/materials', [$materials, 'index']);
 $router->post('/materials', [$materials, 'store']);
 $router->get('/warehouses', [$warehouses, 'index']);
 $router->post('/warehouses', [$warehouses, 'store']);
+$router->get('/inventory', [$inventory, 'index']);
+$router->post('/inventory', [$inventory, 'store']);
 $router->get('/health', [$dashboard, 'health']);
 
 return $router;

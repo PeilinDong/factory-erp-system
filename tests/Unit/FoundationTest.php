@@ -20,6 +20,9 @@ use Erp\Material\MaterialService;
 use Erp\Warehouse\InMemoryWarehouseRepository;
 use Erp\Warehouse\WarehouseService;
 use Erp\Controller\WarehouseController;
+use Erp\Controller\InventoryController;
+use Erp\Inventory\InMemoryInventoryTransactionRepository;
+use Erp\Inventory\InventoryService;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -150,6 +153,7 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('href="/erp/materials"', $html);
         $this->assertStringContains('href="/erp/warehouses"', $html);
+        $this->assertStringContains('href="/erp/inventory"', $html);
         $this->assertStringContains('仓库档案', $html);
         $this->assertStringNotContains('href="#"', $html);
         $this->assertStringNotContains('Dashboard', $html);
@@ -424,6 +428,159 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/warehouses"', $html);
         $this->assertStringNotContains('Warehouse Master', $html);
         $this->assertStringNotContains('Save Warehouse', $html);
+    }
+
+    public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $service = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+
+        $service->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '10',
+            'reference_no' => 'PO-001',
+        ]);
+        $service->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'outbound',
+            'quantity' => '3',
+            'reference_no' => 'WO-001',
+        ]);
+        $service->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'adjustment',
+            'quantity' => '1.5',
+            'reference_no' => 'ADJ-001',
+        ]);
+
+        $this->assertSame(3, count($service->list()));
+        $this->assertSame('8.5', $service->stockBalance($material['id'], $warehouse['id']));
+    }
+
+    public function testInventoryServiceRejectsInvalidQuantity(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $service = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+
+        try {
+            $service->record([
+                'material_id' => (string) $material['id'],
+                'warehouse_id' => (string) $warehouse['id'],
+                'transaction_type' => 'inbound',
+                'quantity' => '0',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('quantity', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected invalid inventory quantity to be rejected');
+    }
+
+    public function testInventoryPageRedirectsGuestToLogin(): void
+    {
+        App::setBasePath('/erp');
+        $redirector = new InMemoryRedirector();
+        $controller = new InventoryController(
+            new InventoryService(
+                new InMemoryInventoryTransactionRepository(),
+                new InMemoryMaterialRepository(),
+                new InMemoryWarehouseRepository(),
+            ),
+            new MaterialService(new InMemoryMaterialRepository()),
+            new WarehouseService(new InMemoryWarehouseRepository()),
+            new InMemorySessionStore(),
+            $redirector,
+        );
+
+        $html = $controller->index();
+
+        $this->assertSame('', $html);
+        $this->assertSame('/erp/login', $redirector->lastLocation());
+    }
+
+    public function testInventoryPageShowsFormAndTransactionsForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $inventory = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '10',
+            'reference_no' => 'PO-001',
+        ]);
+        $controller = new InventoryController(
+            $inventory,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->index();
+
+        $this->assertStringContains('库存流水', $html);
+        $this->assertStringContains('新增库存流水', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('WH-001', $html);
+        $this->assertStringContains('PO-001', $html);
+        $this->assertStringContains('action="/erp/inventory"', $html);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void

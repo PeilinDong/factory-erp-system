@@ -35,6 +35,7 @@ final class DashboardController
         $healthUrl = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
         $materialsUrl = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehousesUrl = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $inventoryUrl = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
 
         $body = <<<HTML
 <main class="app-shell">
@@ -44,6 +45,7 @@ final class DashboardController
       <a href="{$homeUrl}">仪表盘</a>
       <a href="{$materialsUrl}">物料档案</a>
       <a href="{$warehousesUrl}">仓库档案</a>
+      <a href="{$inventoryUrl}">库存流水</a>
       <a href="{$healthUrl}">健康检查</a>
     </nav>
     <form class="logout-form" method="post" action="{$logoutAction}">
@@ -67,8 +69,8 @@ final class DashboardController
       <div class="quick-grid">
         <a href="{$materialsUrl}">物料档案</a>
         <a href="{$warehousesUrl}">仓库档案</a>
+        <a href="{$inventoryUrl}">库存流水</a>
         <span class="disabled-link">BOM 管理 <small>开发中</small></span>
-        <span class="disabled-link">库存流水 <small>开发中</small></span>
         <span class="disabled-link">生产工单 <small>开发中</small></span>
       </div>
     </section>

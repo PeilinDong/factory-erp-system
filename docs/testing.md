@@ -29,6 +29,7 @@ Current tests verify:
 13. Dashboard links only expose implemented modules and avoid dead links.
 14. Material master creation, validation, and protected page rendering.
 15. Warehouse master creation, validation, and protected page rendering.
+16. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
 
 ## Verification Commands
 

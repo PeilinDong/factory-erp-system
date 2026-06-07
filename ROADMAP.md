@@ -22,6 +22,7 @@ Current implemented modules:
 
 - Material master.
 - Warehouse master.
+- Inventory transaction entry.
 
 ## Phase 1 - Inventory Foundation
 
@@ -33,6 +34,13 @@ Goals:
 - Stock balance calculation by material and warehouse.
 - Basic inventory transaction list.
 - Dashboard metrics based on real inventory data.
+
+Current status:
+
+- Inbound, outbound, and adjustment transaction entry is implemented.
+- Basic transaction listing is implemented.
+- Service-level stock balance calculation is implemented.
+- A dedicated stock balance page and dashboard metrics are still pending.
 
 Why this phase matters:
 

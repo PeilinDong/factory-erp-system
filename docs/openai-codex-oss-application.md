@@ -38,11 +38,12 @@ The repository currently includes:
 - Protected dashboard.
 - Material master.
 - Warehouse master.
+- Inventory transaction entry for inbound, outbound, and adjustment records.
 - CLI operations for health checks, migrations, and administrator creation.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.
 
-The project is still early alpha. The most important missing workflows are inventory transactions, BOM, purchasing, work orders, traceability, cost reporting, role management, installer flow, and production hardening.
+The project is still early alpha. The most important missing workflows are stock balance pages, dashboard metrics backed by real data, BOM, purchasing, work orders, traceability, cost reporting, role management, installer flow, and production hardening.
 
 ## How Codex Can Help
 
@@ -63,15 +64,14 @@ Codex is especially valuable here because ERP systems require many small, connec
 
 Good near-term tasks include:
 
-1. Inventory inbound, outbound, and adjustment transactions.
-2. Stock balance calculation by material and warehouse.
+1. Stock balance page by material and warehouse.
+2. Dashboard metrics backed by real inventory data.
 3. Material and warehouse search.
 4. Edit and enable/disable actions for master data.
 5. Excel import/export for early adopter data migration.
 6. BOM foundation and BOM expansion.
-7. Dashboard metrics backed by real database queries.
-8. Additional tests for authentication, validation, and inventory rules.
-9. Documentation for installation, deployment, and contribution workflows.
+7. Additional tests for authentication, validation, and inventory rules.
+8. Documentation for installation, deployment, and contribution workflows.
 
 ## Commitment To Accuracy
 
