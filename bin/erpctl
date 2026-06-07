@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/src/Core/Autoloader.php';
+
+\Erp\Core\Autoloader::register(dirname(__DIR__) . '/src');
+
+echo \Erp\Cli\Application::default()->run($argv);
+
