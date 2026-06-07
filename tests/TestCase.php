@@ -36,6 +36,17 @@ abstract class TestCase
         }
     }
 
+    final protected function assertStringNotContains(string $needle, string $haystack, string $message = ''): void
+    {
+        $this->assertions++;
+        if (str_contains($haystack, $needle)) {
+            throw new \RuntimeException($message !== '' ? $message : sprintf(
+                'Expected output not to contain "%s"',
+                $needle
+            ));
+        }
+    }
+
     final protected function assertTrue(bool $condition, string $message = 'Expected condition to be true'): void
     {
         $this->assertions++;
@@ -44,4 +55,3 @@ abstract class TestCase
         }
     }
 }
-

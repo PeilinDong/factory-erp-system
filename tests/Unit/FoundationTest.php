@@ -17,6 +17,9 @@ use Erp\Controller\DashboardController;
 use Erp\Controller\MaterialController;
 use Erp\Material\InMemoryMaterialRepository;
 use Erp\Material\MaterialService;
+use Erp\Warehouse\InMemoryWarehouseRepository;
+use Erp\Warehouse\WarehouseService;
+use Erp\Controller\WarehouseController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -134,6 +137,20 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('', $html);
         $this->assertSame('/erp/login', $redirector->lastLocation());
+    }
+
+    public function testDashboardExposesImplementedModulesWithoutDeadLinks(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $controller = new DashboardController($session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('href="/erp/materials"', $html);
+        $this->assertStringContains('href="/erp/warehouses"', $html);
+        $this->assertStringNotContains('href="#"', $html);
     }
 
     public function testLoginRejectsMissingCsrfToken(): void
@@ -332,6 +349,75 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('name="csrf_token"', $html);
         $this->assertStringContains('action="/erp/materials"', $html);
+    }
+
+    public function testWarehouseServiceCreatesAndListsWarehouses(): void
+    {
+        $repository = new InMemoryWarehouseRepository();
+        $service = new WarehouseService($repository);
+
+        $warehouse = $service->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+
+        $this->assertSame('WH-001', $warehouse['code']);
+        $this->assertSame('Main Warehouse', $warehouse['name']);
+        $this->assertSame(1, $warehouse['is_active']);
+        $this->assertSame(1, count($service->list()));
+    }
+
+    public function testWarehouseServiceRejectsInvalidWarehouseCode(): void
+    {
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+
+        try {
+            $service->create([
+                'code' => 'x',
+                'name' => 'Main Warehouse',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('warehouse code', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected invalid warehouse code to be rejected');
+    }
+
+    public function testWarehousePageRedirectsGuestToLogin(): void
+    {
+        App::setBasePath('/erp');
+        $redirector = new InMemoryRedirector();
+        $controller = new WarehouseController(
+            new WarehouseService(new InMemoryWarehouseRepository()),
+            new InMemorySessionStore(),
+            $redirector,
+        );
+
+        $html = $controller->index();
+
+        $this->assertSame('', $html);
+        $this->assertSame('/erp/login', $redirector->lastLocation());
+    }
+
+    public function testWarehousePageShowsListAndCreateFormForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $service = new WarehouseService(new InMemoryWarehouseRepository());
+        $service->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $controller = new WarehouseController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('Warehouse Master', $html);
+        $this->assertStringContains('WH-001', $html);
+        $this->assertStringContains('name="csrf_token"', $html);
+        $this->assertStringContains('action="/erp/warehouses"', $html);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void
