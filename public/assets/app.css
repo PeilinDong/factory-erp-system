@@ -54,6 +54,14 @@ h1 {
   line-height: 1.7;
 }
 
+.error {
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 10px 12px;
+}
+
 .login-form {
   display: grid;
   gap: 16px;
@@ -149,4 +157,3 @@ button:hover {
     padding: 16px;
   }
 }
-

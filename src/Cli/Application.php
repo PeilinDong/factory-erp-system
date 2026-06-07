@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Erp\Cli;
 
+use Erp\Auth\PdoUserRepository;
+use Erp\Database\Database;
+
 final class Application
 {
     /**
@@ -15,10 +18,15 @@ final class Application
 
     public static function default(): self
     {
+        $root = dirname(__DIR__, 2);
+        $pdoFactory = static function () use ($root): \PDO {
+            return Database::fromConfigFile($root . '/config/database.php');
+        };
+
         return new self([
             'health' => [new HealthCommand(), 'handle'],
-            'migrate' => [new MigrateCommand(dirname(__DIR__, 2) . '/database/migrations'), 'handle'],
-            'create-admin' => [new CreateAdminCommand(), 'handle'],
+            'migrate' => [new MigrateCommand($root . '/database/migrations', $pdoFactory), 'handle'],
+            'create-admin' => [new CreateAdminCommand(static fn () => new PdoUserRepository($pdoFactory())), 'handle'],
         ]);
     }
 
@@ -40,4 +48,3 @@ final class Application
         return "Factory ERP CLI\nCommands: health, migrate, create-admin\n";
     }
 }
-

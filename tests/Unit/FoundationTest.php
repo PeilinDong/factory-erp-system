@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit;
 
 use Erp\Cli\Application;
+use Erp\Auth\AuthService;
+use Erp\Auth\InMemoryUserRepository;
 use Erp\Core\Config;
 use Erp\Core\Router;
 use Tests\TestCase;
@@ -29,8 +31,10 @@ final class FoundationTest extends TestCase
     {
         $router = new Router();
         $router->get('/health', static fn (): string => 'ok');
+        $router->post('/submit', static fn (): string => 'posted');
 
         $this->assertSame('ok', $router->dispatch('GET', '/health'));
+        $this->assertSame('posted', $router->dispatch('POST', '/submit'));
         $this->assertStringContains('404', $router->dispatch('GET', '/missing'));
     }
 
@@ -85,6 +89,59 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('中国中小制造企业', $html);
         $this->assertStringContains('登录', $html);
+    }
+
+    public function testAuthServiceAuthenticatesStoredPasswordHash(): void
+    {
+        $repository = new InMemoryUserRepository([
+            [
+                'id' => 7,
+                'email' => 'admin@goenn.online',
+                'name' => '管理员',
+                'password_hash' => password_hash('CorrectPassword123', PASSWORD_DEFAULT),
+                'is_active' => 1,
+            ],
+        ]);
+        $auth = new AuthService($repository);
+
+        $user = $auth->attempt('admin@goenn.online', 'CorrectPassword123');
+
+        $this->assertSame(7, $user['id']);
+        $this->assertSame('admin@goenn.online', $user['email']);
+    }
+
+    public function testAuthServiceRejectsInvalidOrInactiveUsers(): void
+    {
+        $repository = new InMemoryUserRepository([
+            [
+                'id' => 8,
+                'email' => 'disabled@example.com',
+                'name' => '停用用户',
+                'password_hash' => password_hash('CorrectPassword123', PASSWORD_DEFAULT),
+                'is_active' => 0,
+            ],
+        ]);
+        $auth = new AuthService($repository);
+
+        $this->assertSame(null, $auth->attempt('missing@example.com', 'CorrectPassword123'));
+        $this->assertSame(null, $auth->attempt('disabled@example.com', 'CorrectPassword123'));
+        $this->assertSame(null, $auth->attempt('disabled@example.com', 'WrongPassword123'));
+    }
+
+    public function testCreateAdminCommandCanPrepareDatabaseInsert(): void
+    {
+        $app = Application::default();
+
+        $output = $app->run([
+            'erpctl',
+            'create-admin',
+            '--email=admin@goenn.online',
+            '--password=CorrectPassword123',
+            '--dry-run',
+        ]);
+
+        $this->assertStringContains('Admin account validated for admin@goenn.online', $output);
+        $this->assertStringContains('Password hash algorithm:', $output);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void

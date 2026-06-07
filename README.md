@@ -16,8 +16,9 @@ The current codebase is the first PHP foundation for the prepared shared-hosting
 - Web front controller at `public/index.php`
 - Routes for dashboard, login, and health check
 - Chinese login page for the ERP positioning
+- Database-backed administrator login
 - CLI entrypoint: `bin/erpctl`
-- CLI commands: `health`, `migrate --dry-run`, `create-admin --dry-run`
+- CLI commands: `health`, `migrate`, `create-admin`
 - MariaDB-compatible foundation migration definitions
 - Custom PHP test runner
 
@@ -42,6 +43,13 @@ Run CLI health check:
 php bin/erpctl health
 ```
 
+After database configuration is available, run migrations and create an administrator:
+
+```powershell
+php bin/erpctl migrate
+php bin/erpctl create-admin --email=admin@example.com --password=ChangeThisPassword123
+```
+
 Run local web server:
 
 ```powershell
@@ -60,4 +68,3 @@ http://127.0.0.1:8080/login
 - [Testing](docs/testing.md)
 - [Deployment](docs/deployment.md)
 - [MVP Design](docs/superpowers/specs/2026-06-07-china-manufacturing-erp-mvp-design.md)
-

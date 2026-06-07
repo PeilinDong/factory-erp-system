@@ -20,6 +20,9 @@ Current tests verify:
 4. CLI health command output.
 5. Migration dry-run table listing.
 6. Login page Chinese ERP positioning.
+7. Password-hash based authentication.
+8. Rejection of missing, inactive, or invalid users.
+9. Shared-host deployment package layout.
 
 ## Verification Commands
 
@@ -38,4 +41,3 @@ For a broad syntax check on Windows PowerShell:
 ```powershell
 Get-ChildItem -Recurse -Include *.php | ForEach-Object { php -l $_.FullName }
 ```
-

@@ -70,4 +70,9 @@ On the server, use PHP 8.3 CLI when available:
 /usr/bin/php8.3 bin/erpctl migrate --dry-run
 ```
 
-Database-backed migration execution will be added after the first schema connection layer is implemented.
+Database-backed migration and administrator creation are now supported when `config/database.php` exists:
+
+```bash
+/usr/bin/php8.3 bin/erpctl migrate
+/usr/bin/php8.3 bin/erpctl create-admin --email=admin@example.com --password=ChangeThisPassword123
+```

@@ -7,6 +7,19 @@ namespace Erp\Cli;
 final class CreateAdminCommand
 {
     /**
+     * @var null|callable(): \Erp\Auth\UserRepository
+     */
+    private $repositoryFactory;
+
+    /**
+     * @param null|callable(): \Erp\Auth\UserRepository $repositoryFactory
+     */
+    public function __construct(?callable $repositoryFactory = null)
+    {
+        $this->repositoryFactory = $repositoryFactory;
+    }
+
+    /**
      * @param array<int, string> $args
      */
     public function handle(array $args): string
@@ -28,7 +41,14 @@ final class CreateAdminCommand
             return "Admin account validated for {$email}\nPassword hash algorithm: " . password_get_info($hash)['algoName'] . "\n";
         }
 
-        return "Database-backed admin creation is not configured in this command yet\n";
+        if (!is_callable($this->repositoryFactory)) {
+            return "Database-backed admin creation is not configured in this command yet\n";
+        }
+
+        $repository = call_user_func($this->repositoryFactory);
+        $repository->createAdmin($email, $hash);
+
+        return "Admin account created or updated for {$email}\n";
     }
 
     /**
@@ -45,4 +65,3 @@ final class CreateAdminCommand
         return null;
     }
 }
-

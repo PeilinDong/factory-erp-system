@@ -10,6 +10,10 @@ final class DashboardController
 {
     public function index(): string
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+        $name = htmlspecialchars($_SESSION['user']['name'] ?? '未登录用户', ENT_QUOTES, 'UTF-8');
         $body = <<<HTML
 <main class="app-shell">
   <aside class="sidebar">
@@ -23,6 +27,7 @@ final class DashboardController
   <section class="content">
     <p class="eyebrow">MVP Foundation</p>
     <h1>生产物料管控闭环</h1>
+    <p class="muted">当前用户：{$name}</p>
     <div class="metric-grid">
       <article><span>物料</span><strong>准备中</strong></article>
       <article><span>BOM</span><strong>准备中</strong></article>
@@ -41,4 +46,3 @@ HTML;
         return 'Factory ERP OK';
     }
 }
-

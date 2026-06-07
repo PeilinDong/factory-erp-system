@@ -16,6 +16,11 @@ final class Router
         $this->routes['GET ' . $this->normalize($path)] = $handler;
     }
 
+    public function post(string $path, callable $handler): void
+    {
+        $this->routes['POST ' . $this->normalize($path)] = $handler;
+    }
+
     public function dispatch(string $method, string $path): string
     {
         $key = strtoupper($method) . ' ' . $this->normalize($path);
