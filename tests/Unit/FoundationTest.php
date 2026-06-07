@@ -29,6 +29,9 @@ use Erp\Controller\BomController;
 use Erp\Purchase\InMemoryPurchaseOrderRepository;
 use Erp\Purchase\PurchaseOrderService;
 use Erp\Controller\PurchaseController;
+use Erp\WorkOrder\InMemoryWorkOrderRepository;
+use Erp\WorkOrder\WorkOrderService;
+use Erp\Controller\WorkOrderController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -103,6 +106,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('bom_items', $output);
         $this->assertStringContains('purchase_orders', $output);
         $this->assertStringContains('purchase_order_items', $output);
+        $this->assertStringContains('work_orders', $output);
     }
 
     public function testLoginPageContainsChineseProductPositioning(): void
@@ -995,6 +999,169 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/purchases?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
+    }
+
+    public function testWorkOrderServiceCreatesOrderFromBomWithRequirements(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                    'scrap_rate' => '5',
+                ],
+            ],
+        ]);
+        $service = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+
+        $order = $service->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+            'due_date' => '2026-07-15',
+        ]);
+
+        $this->assertSame('WO-001', $order['order_no']);
+        $this->assertSame('FG-001', $order['parent_material_code']);
+        $this->assertSame('10', $order['planned_quantity']);
+        $this->assertSame('21', $order['requirements'][0]['required_quantity']);
+        $this->assertSame('planned', $order['status']);
+    }
+
+    public function testWorkOrderServiceRejectsInvalidBomOrQuantity(): void
+    {
+        $service = new WorkOrderService(
+            new InMemoryWorkOrderRepository(),
+            new BomService(new InMemoryBomRepository(), new InMemoryMaterialRepository()),
+        );
+
+        try {
+            $service->create([
+                'order_no' => 'WO-001',
+                'bom_id' => '99',
+                'planned_quantity' => '0',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('planned quantity', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected invalid work order quantity to be rejected');
+    }
+
+    public function testWorkOrderPageShowsListAndCreateFormForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+        ]);
+        $controller = new WorkOrderController($workOrders, $bomService, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('生产工单', $html);
+        $this->assertStringContains('新增工单', $html);
+        $this->assertStringContains('WO-001', $html);
+        $this->assertStringContains('FG-001', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('action="/erp/work-orders"', $html);
+        $this->assertStringContains('name="planned_quantity"', $html);
+    }
+
+    public function testWorkOrderControllerStoresOrderAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $redirector = new InMemoryRedirector();
+        $controller = new WorkOrderController($workOrders, $bomService, $session, $redirector);
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'order_no' => 'WO-002',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '5',
+            'due_date' => '2026-07-20',
+        ]);
+
+        $this->assertSame('/erp/work-orders?created=1', $redirector->lastLocation());
+        $this->assertSame(1, count($workOrders->list()));
     }
 
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void

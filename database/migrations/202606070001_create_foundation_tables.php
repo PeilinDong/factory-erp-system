@@ -12,6 +12,7 @@ return [
         'bom_items',
         'purchase_orders',
         'purchase_order_items',
+        'work_orders',
         'inventory_transactions',
     ],
     'sql' => [
@@ -82,6 +83,16 @@ return [
             unit_price DECIMAL(18, 6) NOT NULL,
             CONSTRAINT fk_purchase_order_items_order FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
             CONSTRAINT fk_purchase_order_items_material FOREIGN KEY (material_id) REFERENCES materials(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS work_orders (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            order_no VARCHAR(64) NOT NULL UNIQUE,
+            bom_id BIGINT UNSIGNED NOT NULL,
+            planned_quantity DECIMAL(18, 6) NOT NULL,
+            due_date DATE NULL,
+            status VARCHAR(32) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_work_orders_bom FOREIGN KEY (bom_id) REFERENCES boms(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS inventory_transactions (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

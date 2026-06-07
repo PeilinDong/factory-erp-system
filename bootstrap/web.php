@@ -9,6 +9,7 @@ use Erp\Controller\InventoryController;
 use Erp\Controller\MaterialController;
 use Erp\Controller\PurchaseController;
 use Erp\Controller\WarehouseController;
+use Erp\Controller\WorkOrderController;
 use Erp\Bom\BomService;
 use Erp\Bom\InMemoryBomRepository;
 use Erp\Bom\PdoBomRepository;
@@ -32,6 +33,9 @@ use Erp\Purchase\PurchaseOrderService;
 use Erp\Warehouse\InMemoryWarehouseRepository;
 use Erp\Warehouse\PdoWarehouseRepository;
 use Erp\Warehouse\WarehouseService;
+use Erp\WorkOrder\InMemoryWorkOrderRepository;
+use Erp\WorkOrder\PdoWorkOrderRepository;
+use Erp\WorkOrder\WorkOrderService;
 
 require_once dirname(__DIR__) . '/src/Core/Autoloader.php';
 
@@ -55,6 +59,7 @@ $warehouseService = null;
 $inventoryService = null;
 $bomService = null;
 $purchaseService = null;
+$workOrderService = null;
 $databaseConfig = dirname(__DIR__) . '/config/database.php';
 if (is_file($databaseConfig)) {
     $pdo = Database::fromConfigFile($databaseConfig);
@@ -63,10 +68,12 @@ if (is_file($databaseConfig)) {
     $warehouseRepository = new PdoWarehouseRepository($pdo);
     $bomRepository = new PdoBomRepository($pdo);
     $purchaseRepository = new PdoPurchaseOrderRepository($pdo);
+    $workOrderRepository = new PdoWorkOrderRepository($pdo);
     $materialService = new MaterialService($materialRepository);
     $warehouseService = new WarehouseService($warehouseRepository);
     $bomService = new BomService($bomRepository, $materialRepository);
     $purchaseService = new PurchaseOrderService($purchaseRepository, $materialRepository);
+    $workOrderService = new WorkOrderService($workOrderRepository, $bomService);
     $inventoryService = new InventoryService(
         new PdoInventoryTransactionRepository($pdo),
         $materialRepository,
@@ -78,10 +85,12 @@ $materialRepository ??= new InMemoryMaterialRepository();
 $warehouseRepository ??= new InMemoryWarehouseRepository();
 $bomRepository ??= new InMemoryBomRepository();
 $purchaseRepository ??= new InMemoryPurchaseOrderRepository();
+$workOrderRepository ??= new InMemoryWorkOrderRepository();
 $materialService ??= new MaterialService($materialRepository);
 $warehouseService ??= new WarehouseService($warehouseRepository);
 $bomService ??= new BomService($bomRepository, $materialRepository);
 $purchaseService ??= new PurchaseOrderService($purchaseRepository, $materialRepository);
+$workOrderService ??= new WorkOrderService($workOrderRepository, $bomService);
 $inventoryService ??= new InventoryService(
     new InMemoryInventoryTransactionRepository(),
     $materialRepository,
@@ -91,6 +100,7 @@ $materials = new MaterialController($materialService, $session, $redirector);
 $warehouses = new WarehouseController($warehouseService, $session, $redirector);
 $boms = new BomController($bomService, $materialService, $session, $redirector);
 $purchases = new PurchaseController($purchaseService, $materialService, $session, $redirector);
+$workOrders = new WorkOrderController($workOrderService, $bomService, $session, $redirector);
 $inventory = new InventoryController($inventoryService, $materialService, $warehouseService, $session, $redirector);
 $dashboard = new DashboardController($session, $redirector, $inventoryService);
 
@@ -112,6 +122,8 @@ $router->get('/boms', [$boms, 'index']);
 $router->post('/boms', [$boms, 'store']);
 $router->get('/purchases', [$purchases, 'index']);
 $router->post('/purchases', [$purchases, 'store']);
+$router->get('/work-orders', [$workOrders, 'index']);
+$router->post('/work-orders', [$workOrders, 'store']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
 $router->get('/inventory/balances', [$inventory, 'balances']);
