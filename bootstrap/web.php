@@ -7,6 +7,7 @@ use Erp\Controller\BomController;
 use Erp\Controller\DashboardController;
 use Erp\Controller\InventoryController;
 use Erp\Controller\MaterialController;
+use Erp\Controller\PurchaseController;
 use Erp\Controller\WarehouseController;
 use Erp\Bom\BomService;
 use Erp\Bom\InMemoryBomRepository;
@@ -25,6 +26,9 @@ use Erp\Inventory\PdoInventoryTransactionRepository;
 use Erp\Material\InMemoryMaterialRepository;
 use Erp\Material\MaterialService;
 use Erp\Material\PdoMaterialRepository;
+use Erp\Purchase\InMemoryPurchaseOrderRepository;
+use Erp\Purchase\PdoPurchaseOrderRepository;
+use Erp\Purchase\PurchaseOrderService;
 use Erp\Warehouse\InMemoryWarehouseRepository;
 use Erp\Warehouse\PdoWarehouseRepository;
 use Erp\Warehouse\WarehouseService;
@@ -50,6 +54,7 @@ $materialService = null;
 $warehouseService = null;
 $inventoryService = null;
 $bomService = null;
+$purchaseService = null;
 $databaseConfig = dirname(__DIR__) . '/config/database.php';
 if (is_file($databaseConfig)) {
     $pdo = Database::fromConfigFile($databaseConfig);
@@ -57,9 +62,11 @@ if (is_file($databaseConfig)) {
     $materialRepository = new PdoMaterialRepository($pdo);
     $warehouseRepository = new PdoWarehouseRepository($pdo);
     $bomRepository = new PdoBomRepository($pdo);
+    $purchaseRepository = new PdoPurchaseOrderRepository($pdo);
     $materialService = new MaterialService($materialRepository);
     $warehouseService = new WarehouseService($warehouseRepository);
     $bomService = new BomService($bomRepository, $materialRepository);
+    $purchaseService = new PurchaseOrderService($purchaseRepository, $materialRepository);
     $inventoryService = new InventoryService(
         new PdoInventoryTransactionRepository($pdo),
         $materialRepository,
@@ -70,9 +77,11 @@ $auth = new AuthController($authService, $session, $redirector);
 $materialRepository ??= new InMemoryMaterialRepository();
 $warehouseRepository ??= new InMemoryWarehouseRepository();
 $bomRepository ??= new InMemoryBomRepository();
+$purchaseRepository ??= new InMemoryPurchaseOrderRepository();
 $materialService ??= new MaterialService($materialRepository);
 $warehouseService ??= new WarehouseService($warehouseRepository);
 $bomService ??= new BomService($bomRepository, $materialRepository);
+$purchaseService ??= new PurchaseOrderService($purchaseRepository, $materialRepository);
 $inventoryService ??= new InventoryService(
     new InMemoryInventoryTransactionRepository(),
     $materialRepository,
@@ -81,6 +90,7 @@ $inventoryService ??= new InventoryService(
 $materials = new MaterialController($materialService, $session, $redirector);
 $warehouses = new WarehouseController($warehouseService, $session, $redirector);
 $boms = new BomController($bomService, $materialService, $session, $redirector);
+$purchases = new PurchaseController($purchaseService, $materialService, $session, $redirector);
 $inventory = new InventoryController($inventoryService, $materialService, $warehouseService, $session, $redirector);
 $dashboard = new DashboardController($session, $redirector, $inventoryService);
 
@@ -100,6 +110,8 @@ $router->post('/warehouses/update', [$warehouses, 'update']);
 $router->post('/warehouses/status', [$warehouses, 'status']);
 $router->get('/boms', [$boms, 'index']);
 $router->post('/boms', [$boms, 'store']);
+$router->get('/purchases', [$purchases, 'index']);
+$router->post('/purchases', [$purchases, 'store']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
 $router->get('/inventory/balances', [$inventory, 'balances']);

@@ -1,0 +1,167 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Erp\Purchase;
+
+use Erp\Material\MaterialRepository;
+
+final class PurchaseOrderService
+{
+    public function __construct(
+        private readonly PurchaseOrderRepository $orders,
+        private readonly MaterialRepository $materials,
+    ) {
+    }
+
+    /**
+     * @return array<int, array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}>
+     */
+    public function list(): array
+    {
+        return array_map($this->enrich(...), $this->orders->list());
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    public function create(array $data): array
+    {
+        $supplierName = trim((string) ($data['supplier_name'] ?? ''));
+        $orderNo = strtoupper(trim((string) ($data['order_no'] ?? '')));
+        $expectedDate = trim((string) ($data['expected_date'] ?? ''));
+        $items = $this->normalizeItems($data);
+
+        if ($supplierName === '') {
+            throw new \InvalidArgumentException('supplier name must not be empty');
+        }
+
+        if (!preg_match('/^[A-Z0-9][A-Z0-9._-]{1,63}$/', $orderNo)) {
+            throw new \InvalidArgumentException('purchase order number is invalid');
+        }
+
+        if ($expectedDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $expectedDate)) {
+            throw new \InvalidArgumentException('expected date must use YYYY-MM-DD');
+        }
+
+        foreach ($items as $item) {
+            if ($this->materialById($item['material_id']) === null) {
+                throw new \InvalidArgumentException('material must exist');
+            }
+        }
+
+        return $this->enrich($this->orders->create([
+            'order_no' => $orderNo,
+            'supplier_name' => $supplierName,
+            'expected_date' => $expectedDate,
+            'status' => 'draft',
+            'items' => $items,
+        ]));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<int, array{material_id:int,quantity:string,unit_price:string}>
+     */
+    private function normalizeItems(array $data): array
+    {
+        $rawItems = $data['items'] ?? null;
+        if (!is_array($rawItems)) {
+            $rawItems = [[
+                'material_id' => $data['material_id'] ?? '',
+                'quantity' => $data['quantity'] ?? '',
+                'unit_price' => $data['unit_price'] ?? '',
+            ]];
+        }
+
+        $items = [];
+        foreach ($rawItems as $rawItem) {
+            if (!is_array($rawItem)) {
+                continue;
+            }
+
+            $materialId = (int) ($rawItem['material_id'] ?? 0);
+            $quantity = trim((string) ($rawItem['quantity'] ?? ''));
+            $unitPrice = trim((string) ($rawItem['unit_price'] ?? ''));
+
+            if (!preg_match('/^\d+(\.\d{1,6})?$/', $quantity) || (float) $quantity <= 0.0) {
+                throw new \InvalidArgumentException('quantity must be greater than zero');
+            }
+
+            if (!preg_match('/^\d+(\.\d{1,6})?$/', $unitPrice) || (float) $unitPrice < 0.0) {
+                throw new \InvalidArgumentException('unit price must not be negative');
+            }
+
+            $items[] = [
+                'material_id' => $materialId,
+                'quantity' => $this->normalizeNumber($quantity),
+                'unit_price' => $this->normalizeNumber($unitPrice),
+            ];
+        }
+
+        if ($items === []) {
+            throw new \InvalidArgumentException('purchase order must contain at least one item');
+        }
+
+        return $items;
+    }
+
+    /**
+     * @return null|array{id:int,code:string,name:string}
+     */
+    private function materialById(int $id): ?array
+    {
+        foreach ($this->materials->list() as $material) {
+            if ((int) $material['id'] === $id) {
+                return [
+                    'id' => (int) $material['id'],
+                    'code' => (string) $material['code'],
+                    'name' => (string) $material['name'],
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>} $order
+     * @return array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    private function enrich(array $order): array
+    {
+        $items = [];
+        $total = 0.0;
+        foreach ($order['items'] as $item) {
+            $material = $this->materialById($item['material_id']);
+            $lineAmount = (float) $item['quantity'] * (float) $item['unit_price'];
+            $total += $lineAmount;
+            $items[] = [
+                'id' => $item['id'],
+                'purchase_order_id' => $item['purchase_order_id'],
+                'material_id' => $item['material_id'],
+                'material_code' => (string) ($material['code'] ?? $item['material_id']),
+                'material_name' => (string) ($material['name'] ?? ''),
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'line_amount' => $this->normalizeNumber((string) $lineAmount),
+            ];
+        }
+
+        return [
+            'id' => $order['id'],
+            'order_no' => $order['order_no'],
+            'supplier_name' => $order['supplier_name'],
+            'expected_date' => $order['expected_date'],
+            'status' => $order['status'],
+            'total_amount' => $this->normalizeNumber((string) $total),
+            'items' => $items,
+        ];
+    }
+
+    private function normalizeNumber(string $number): string
+    {
+        return rtrim(rtrim(sprintf('%.6F', (float) $number), '0'), '.');
+    }
+}

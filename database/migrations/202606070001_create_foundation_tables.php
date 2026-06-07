@@ -10,6 +10,8 @@ return [
         'warehouses',
         'boms',
         'bom_items',
+        'purchase_orders',
+        'purchase_order_items',
         'inventory_transactions',
     ],
     'sql' => [
@@ -63,6 +65,23 @@ return [
             scrap_rate DECIMAL(9, 4) NOT NULL DEFAULT 0,
             CONSTRAINT fk_bom_items_bom FOREIGN KEY (bom_id) REFERENCES boms(id),
             CONSTRAINT fk_bom_items_component_material FOREIGN KEY (component_material_id) REFERENCES materials(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS purchase_orders (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            order_no VARCHAR(64) NOT NULL UNIQUE,
+            supplier_name VARCHAR(190) NOT NULL,
+            expected_date DATE NULL,
+            status VARCHAR(32) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS purchase_order_items (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            purchase_order_id BIGINT UNSIGNED NOT NULL,
+            material_id BIGINT UNSIGNED NOT NULL,
+            quantity DECIMAL(18, 6) NOT NULL,
+            unit_price DECIMAL(18, 6) NOT NULL,
+            CONSTRAINT fk_purchase_order_items_order FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
+            CONSTRAINT fk_purchase_order_items_material FOREIGN KEY (material_id) REFERENCES materials(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS inventory_transactions (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

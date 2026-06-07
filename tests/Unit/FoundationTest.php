@@ -26,6 +26,9 @@ use Erp\Inventory\InventoryService;
 use Erp\Bom\BomService;
 use Erp\Bom\InMemoryBomRepository;
 use Erp\Controller\BomController;
+use Erp\Purchase\InMemoryPurchaseOrderRepository;
+use Erp\Purchase\PurchaseOrderService;
+use Erp\Controller\PurchaseController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -98,6 +101,8 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('inventory_transactions', $output);
         $this->assertStringContains('boms', $output);
         $this->assertStringContains('bom_items', $output);
+        $this->assertStringContains('purchase_orders', $output);
+        $this->assertStringContains('purchase_order_items', $output);
     }
 
     public function testLoginPageContainsChineseProductPositioning(): void
@@ -863,6 +868,132 @@ final class FoundationTest extends TestCase
         ]);
 
         $this->assertSame('/erp/boms?created=1', $redirector->lastLocation());
+        $this->assertSame(1, count($service->list()));
+    }
+
+    public function testPurchaseOrderServiceCreatesOrderWithAmount(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+
+        $order = $service->create([
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-001',
+            'expected_date' => '2026-06-30',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+
+        $this->assertSame('PO-001', $order['order_no']);
+        $this->assertSame('上海供应商', $order['supplier_name']);
+        $this->assertSame('MAT-001', $order['items'][0]['material_code']);
+        $this->assertSame('125', $order['total_amount']);
+        $this->assertSame('draft', $order['status']);
+    }
+
+    public function testPurchaseOrderServiceRejectsInvalidQuantityAndPrice(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+
+        try {
+            $service->create([
+                'supplier_name' => '上海供应商',
+                'order_no' => 'PO-001',
+                'material_id' => (string) $material['id'],
+                'quantity' => '0',
+                'unit_price' => '-1',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('quantity', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected invalid purchase quantity to be rejected');
+    }
+
+    public function testPurchasePageShowsListAndCreateFormForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $service->create([
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-001',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->index();
+
+        $this->assertStringContains('采购订单', $html);
+        $this->assertStringContains('新增采购单', $html);
+        $this->assertStringContains('PO-001', $html);
+        $this->assertStringContains('上海供应商', $html);
+        $this->assertStringContains('125', $html);
+        $this->assertStringContains('action="/erp/purchases"', $html);
+        $this->assertStringContains('name="unit_price"', $html);
+    }
+
+    public function testPurchaseControllerStoresOrderAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $redirector = new InMemoryRedirector();
+        $controller = new PurchaseController($service, new MaterialService($materials), $session, $redirector);
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-002',
+            'expected_date' => '2026-07-01',
+            'material_id' => (string) $material['id'],
+            'quantity' => '5',
+            'unit_price' => '20',
+        ]);
+
+        $this->assertSame('/erp/purchases?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
     }
 
