@@ -7,12 +7,12 @@ namespace Erp\Auth;
 interface SessionStore
 {
     /**
-     * @return null|array{id:int,email:string,name:string}
+     * @return null|array{id:int,email:string,name:string,role_code?:string,role_name?:string}
      */
     public function user(): ?array;
 
     /**
-     * @param array{id:int,email:string,name:string} $user
+     * @param array{id:int,email:string,name:string,role_code?:string,role_name?:string} $user
      */
     public function setUser(array $user): void;
 
@@ -24,4 +24,3 @@ interface SessionStore
 
     public function verifyCsrf(?string $token): bool;
 }
-

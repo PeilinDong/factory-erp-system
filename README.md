@@ -41,7 +41,7 @@ Implemented so far:
 - Stock balance page by material and warehouse.
 - Batch traceability page.
 - Basic material shortage analysis for planned work orders.
-- User management foundation with basic role assignment and enable/disable actions.
+- User management foundation with basic role assignment, enable/disable actions, and role checks for key operations.
 - Dashboard inventory metrics backed by inventory transactions.
 - MariaDB-compatible foundation migrations.
 - CLI entrypoint: `bin/erpctl`.
@@ -57,7 +57,7 @@ Not implemented yet:
 - Partial purchase receipt, purchase return, and supplier master data.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
-- Fine-grained permission checks beyond the initial user and role foundation.
+- Data-scope permission controls and operation audit logs.
 - Production hardening, installer flow, and upgrade tooling.
 
 ## Technology
@@ -155,7 +155,7 @@ Near-term priorities:
 2. Excel import/export for material, warehouse, and BOM data.
 3. Convert shortage analysis into purchasing suggestions.
 4. Add cost visibility for work order material usage.
-5. Add fine-grained role permissions and operation audit logs.
+5. Add data-scope permissions and operation audit logs.
 
 ## Contributing
 

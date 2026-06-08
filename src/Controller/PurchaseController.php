@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Erp\Controller;
 
 use Erp\Auth\NativeSessionStore;
+use Erp\Auth\PermissionService;
 use Erp\Auth\SessionStore;
 use Erp\Core\App;
 use Erp\Core\Sidebar;
@@ -92,6 +93,11 @@ HTML;
             return '';
         }
 
+        if (!PermissionService::can($session->user(), 'purchase.manage')) {
+            $this->redirector()->redirect(App::url('/purchases?error=forbidden'));
+            return '';
+        }
+
         $input ??= $_POST;
         if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
             $this->redirector()->redirect(App::url('/purchases?error=csrf'));
@@ -116,6 +122,11 @@ HTML;
         $session = $this->session();
         if ($session->user() === null) {
             $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'purchase.receive')) {
+            $this->redirector()->redirect(App::url('/purchases?error=forbidden'));
             return '';
         }
 

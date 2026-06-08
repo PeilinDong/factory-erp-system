@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Erp\Controller;
 
 use Erp\Auth\NativeSessionStore;
+use Erp\Auth\PermissionService;
 use Erp\Auth\SessionStore;
 use Erp\Core\App;
 use Erp\Core\Sidebar;
@@ -172,6 +173,11 @@ HTML;
         $session = $this->session();
         if ($session->user() === null) {
             $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'inventory.manage')) {
+            $this->redirector()->redirect(App::url('/inventory?error=forbidden'));
             return '';
         }
 

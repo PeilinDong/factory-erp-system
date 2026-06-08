@@ -8,6 +8,7 @@ use Erp\Cli\Application;
 use Erp\Auth\AuthService;
 use Erp\Auth\InMemoryUserRepository;
 use Erp\Auth\InMemorySessionStore;
+use Erp\Auth\PermissionService;
 use Erp\Auth\UserManagementService;
 use Erp\Core\App;
 use Erp\Core\Config;
@@ -268,6 +269,7 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/', $redirector->lastLocation());
         $this->assertSame('admin@goenn.online', $session->user()['email']);
+        $this->assertSame('admin', $session->user()['role_code']);
         $this->assertSame(1, $session->regenerateCount());
     }
 
@@ -387,6 +389,31 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/users"', $html);
         $this->assertStringContains('action="/erp/users/status"', $html);
         $this->assertPrimaryNavigation($html);
+    }
+
+    public function testUserManagementPageRejectsNonAdminRole(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'planner@example.com', 'name' => '计划员', 'role_code' => 'planner']);
+        $redirector = new InMemoryRedirector();
+        $controller = new UserController(new UserManagementService(new InMemoryUserRepository()), $session, $redirector);
+
+        $html = $controller->index();
+
+        $this->assertSame('', $html);
+        $this->assertSame('/erp/?error=forbidden', $redirector->lastLocation());
+    }
+
+    public function testPermissionServiceAllowsOnlyConfiguredRoles(): void
+    {
+        $this->assertSame(true, PermissionService::can(['role_code' => 'admin'], 'inventory.manage'));
+        $this->assertSame(true, PermissionService::can(['role_code' => 'admin'], 'users.manage'));
+        $this->assertSame(false, PermissionService::can(['role_code' => 'planner'], 'users.manage'));
+        $this->assertSame(true, PermissionService::can(['role_code' => 'warehouse'], 'inventory.manage'));
+        $this->assertSame(false, PermissionService::can(['role_code' => 'purchasing'], 'inventory.manage'));
+        $this->assertSame(true, PermissionService::can(['role_code' => 'purchasing'], 'purchase.manage'));
+        $this->assertSame(false, PermissionService::can(['role_code' => 'warehouse'], 'purchase.manage'));
     }
 
     public function testMaterialServiceCreatesAndListsMaterials(): void
@@ -1075,6 +1102,44 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/purchases?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
+    }
+
+    public function testPurchaseControllerRejectsWarehouseRoleForPurchaseCreation(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'warehouse@example.com', 'name' => '仓库员', 'role_code' => 'warehouse']);
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $redirector = new InMemoryRedirector();
+        $warehouses = new InMemoryWarehouseRepository();
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
+            $session,
+            $redirector,
+        );
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'supplier_name' => '供应商A',
+            'order_no' => 'PO-403',
+            'material_id' => (string) $material['id'],
+            'quantity' => '5',
+            'unit_price' => '20',
+        ]);
+
+        $this->assertSame('/erp/purchases?error=forbidden', $redirector->lastLocation());
+        $this->assertSame(0, count($service->list()));
     }
 
     public function testPurchaseOrderServiceReceivesOrderToInventory(): void
@@ -2019,6 +2084,86 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('href="/erp/inventory/trace?batch_no=LOT-001"', $html);
         $this->assertStringContains('action="/erp/inventory"', $html);
         $this->assertPrimaryNavigation($html);
+    }
+
+    public function testInventoryControllerRejectsPurchasingRoleForStockAdjustment(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'buyer@example.com', 'name' => '采购员', 'role_code' => 'purchasing']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $redirector = new InMemoryRedirector();
+        $controller = new InventoryController(
+            $inventory,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $session,
+            $redirector,
+        );
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'adjustment',
+            'quantity' => '10',
+        ]);
+
+        $this->assertSame('/erp/inventory?error=forbidden', $redirector->lastLocation());
+        $this->assertSame(0, count($inventory->list()));
+    }
+
+    public function testInventoryControllerAllowsWarehouseRoleForStockTransaction(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'warehouse@example.com', 'name' => '仓库员', 'role_code' => 'warehouse']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $redirector = new InMemoryRedirector();
+        $controller = new InventoryController(
+            $inventory,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $session,
+            $redirector,
+        );
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'adjustment',
+            'quantity' => '10',
+        ]);
+
+        $this->assertSame('/erp/inventory?created=1', $redirector->lastLocation());
+        $this->assertSame(1, count($inventory->list()));
     }
 
     public function testInventoryBalancePageShowsCurrentStockForLoggedInUser(): void

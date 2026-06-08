@@ -11,7 +11,7 @@ final class AuthService
     }
 
     /**
-     * @return null|array{id:int,email:string,name:string}
+     * @return null|array{id:int,email:string,name:string,role_code:string,role_name:string}
      */
     public function attempt(string $email, string $password): ?array
     {
@@ -28,7 +28,8 @@ final class AuthService
             'id' => (int) $user['id'],
             'email' => $user['email'],
             'name' => $user['name'],
+            'role_code' => (string) ($user['role_code'] ?? 'admin'),
+            'role_name' => (string) ($user['role_name'] ?? '管理员'),
         ];
     }
 }
-

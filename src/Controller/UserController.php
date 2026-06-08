@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Erp\Controller;
 
 use Erp\Auth\NativeSessionStore;
+use Erp\Auth\PermissionService;
 use Erp\Auth\SessionStore;
 use Erp\Auth\UserManagementService;
 use Erp\Core\App;
@@ -27,6 +28,11 @@ final class UserController
         $session = $this->session();
         if ($session->user() === null) {
             $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'users.manage')) {
+            $this->redirector()->redirect(App::url('/?error=forbidden'));
             return '';
         }
 
@@ -83,6 +89,11 @@ HTML;
             return '';
         }
 
+        if (!PermissionService::can($session->user(), 'users.manage')) {
+            $this->redirector()->redirect(App::url('/?error=forbidden'));
+            return '';
+        }
+
         $input ??= $_POST;
         if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
             $this->redirector()->redirect(App::url('/users?error=csrf'));
@@ -107,6 +118,11 @@ HTML;
         $session = $this->session();
         if ($session->user() === null) {
             $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'users.manage')) {
+            $this->redirector()->redirect(App::url('/?error=forbidden'));
             return '';
         }
 

@@ -41,12 +41,12 @@ The repository currently includes:
 - Inventory transaction entry for inbound, outbound, and adjustment records.
 - Stock balance page and dashboard inventory metrics.
 - BOM, purchase order, production work order, batch traceability, and basic material shortage analysis foundations.
-- User management foundation with role assignment and enable/disable actions.
+- User management foundation with role assignment, enable/disable actions, and key operation permission checks.
 - CLI operations for health checks, migrations, and administrator creation.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.
 
-The project is still early alpha. The most important missing workflows are purchasing suggestions, richer purchase and work order status control, Excel import/export, cost reporting, fine-grained permission checks, installer flow, and production hardening.
+The project is still early alpha. The most important missing workflows are purchasing suggestions, richer purchase and work order status control, Excel import/export, cost reporting, operation audit logs, data-scope permissions, installer flow, and production hardening.
 
 ## How Codex Can Help
 

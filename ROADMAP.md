@@ -145,7 +145,8 @@ Goals:
 Current status:
 
 - Basic user management with role assignment and enable/disable actions is implemented.
-- Fine-grained permission checks, operation audit logs, and data-scope controls are not implemented yet.
+- Key operation permission checks are implemented for user management, purchasing, inventory, and work order actions.
+- Operation audit logs and data-scope controls are not implemented yet.
 
 Why this phase matters:
 
