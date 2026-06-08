@@ -22,8 +22,13 @@ Current implemented modules:
 
 - Material master.
 - Warehouse master.
+- BOM management foundation.
+- Purchase order foundation.
+- Production work order foundation.
 - Inventory transaction entry.
 - Stock balance page.
+- Batch traceability page.
+- Basic material shortage analysis for planned work orders.
 - Dashboard inventory metrics.
 
 ## Phase 1 - Inventory Foundation
@@ -74,6 +79,12 @@ Goals:
 - Shortage checks.
 - Purchasing suggestion draft generation.
 
+Current status:
+
+- Single-level BOM creation and requirement calculation are implemented.
+- Basic shortage analysis for planned work orders is implemented.
+- Multi-level expansion, effective-date control, and purchasing suggestion generation are not implemented yet.
+
 Why this phase matters:
 
 BOM and requirement calculation turn inventory records into production planning value.
@@ -89,6 +100,12 @@ Goals:
 - Finished-goods receipt.
 - Work order status tracking.
 
+Current status:
+
+- Purchase order creation and full receipt into inventory are implemented.
+- Work order creation, full material issue, and full finished-goods receipt are implemented.
+- Partial receipt, purchase return, work order return, supplement issue, and richer status control are not implemented yet.
+
 Why this phase matters:
 
 This phase connects planning to daily factory execution.
@@ -102,6 +119,11 @@ Goals:
 - Work order material cost summary.
 - Basic cost variance visibility.
 - Printable and exportable reports.
+
+Current status:
+
+- Batch number recording and basic batch traceability are implemented.
+- Cost summaries and printable/exportable reports are not implemented yet.
 
 Why this phase matters:
 

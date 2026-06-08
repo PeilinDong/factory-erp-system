@@ -34,8 +34,13 @@ Implemented so far:
 - Protected dashboard.
 - Material master page.
 - Warehouse master page.
+- BOM management foundation.
+- Purchase order foundation with purchase receipt into inventory.
+- Production work order foundation with material issue and finished-goods receipt.
 - Inventory transaction page for inbound, outbound, and adjustment records.
 - Stock balance page by material and warehouse.
+- Batch traceability page.
+- Basic material shortage analysis for planned work orders.
 - Dashboard inventory metrics backed by inventory transactions.
 - MariaDB-compatible foundation migrations.
 - CLI entrypoint: `bin/erpctl`.
@@ -45,11 +50,11 @@ Implemented so far:
 
 Not implemented yet:
 
-- BOM management.
-- Inventory inbound, outbound, and adjustment transactions.
-- Purchasing suggestions.
-- Production work orders.
-- Traceability reports.
+- Excel import/export for master data.
+- Multi-level BOM expansion, BOM approval, and effective-date control.
+- Purchasing suggestions generated from shortage analysis.
+- Partial purchase receipt, purchase return, and supplier master data.
+- Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
 - Permission management beyond the initial administrator foundation.
 - Production hardening, installer flow, and upgrade tooling.
@@ -145,11 +150,11 @@ See [ROADMAP.md](ROADMAP.md).
 
 Near-term priorities:
 
-1. Material and warehouse search, edit, and enable/disable actions.
-2. Excel import/export for master data.
-3. BOM foundation.
-4. Work order foundation.
-5. Purchasing suggestions.
+1. Strengthen work order and purchase order status control.
+2. Excel import/export for material, warehouse, and BOM data.
+3. Convert shortage analysis into purchasing suggestions.
+4. Add cost visibility for work order material usage.
+5. Add role permissions and operation audit logs.
 
 ## Contributing
 

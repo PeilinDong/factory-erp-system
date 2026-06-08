@@ -39,6 +39,7 @@ final class DashboardController
         $bomsUrl = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
         $purchasesUrl = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
         $workOrdersUrl = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
+        $shortagesUrl = htmlspecialchars(App::url('/planning/shortages'), ENT_QUOTES, 'UTF-8');
         $inventoryUrl = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balancesUrl = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $traceUrl = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
@@ -65,6 +66,7 @@ final class DashboardController
         <a href="{$bomsUrl}">BOM 管理</a>
         <a href="{$purchasesUrl}">采购订单</a>
         <a href="{$workOrdersUrl}">生产工单</a>
+        <a href="{$shortagesUrl}">缺料分析</a>
         <a href="{$inventoryUrl}">库存流水</a>
         <a href="{$balancesUrl}">库存余额</a>
         <a href="{$traceUrl}">批次追溯</a>

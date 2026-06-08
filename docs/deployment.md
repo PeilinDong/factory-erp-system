@@ -76,7 +76,7 @@ On the server, use PHP 8.3 CLI when available:
 /usr/bin/php8.3 bin/erpctl migrate --dry-run
 ```
 
-Database-backed migration and administrator creation are now supported when `config/database.php` exists:
+Database-backed migration and administrator creation are supported when `config/database.php` exists:
 
 ```bash
 /usr/bin/php8.3 bin/erpctl migrate

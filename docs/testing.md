@@ -31,6 +31,9 @@ Current tests verify:
 15. Warehouse master creation, validation, and protected page rendering.
 16. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
 17. Stock balance page rendering and dashboard inventory metrics.
+18. BOM, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
+19. Batch traceability and shared primary navigation coverage.
+20. Basic material shortage analysis for planned work orders.
 
 ## Verification Commands
 

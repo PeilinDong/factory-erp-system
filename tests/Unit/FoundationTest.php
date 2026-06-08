@@ -32,6 +32,8 @@ use Erp\Controller\PurchaseController;
 use Erp\WorkOrder\InMemoryWorkOrderRepository;
 use Erp\WorkOrder\WorkOrderService;
 use Erp\Controller\WorkOrderController;
+use Erp\Planning\MaterialShortageService;
+use Erp\Controller\PlanningController;
 use Tests\TestCase;
 
 final class FoundationTest extends TestCase
@@ -1669,6 +1671,136 @@ final class FoundationTest extends TestCase
         $this->assertSame('completed', $workOrders->list()[0]['status']);
     }
 
+    public function testMaterialShortageServiceSummarizesPlannedWorkOrderDemandAgainstStock(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+        ]);
+        $issuedOrder = $workOrders->create([
+            'order_no' => 'WO-002',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '5',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $inventory->record([
+            'material_id' => (string) $component['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '8',
+        ]);
+        $workOrders->issueMaterials($issuedOrder['id'], $warehouse['id'], $inventory);
+        $service = new MaterialShortageService($workOrders, $inventory);
+
+        $rows = $service->analyze();
+
+        $this->assertSame(1, count($rows));
+        $this->assertSame('MAT-001', $rows[0]['material_code']);
+        $this->assertSame('原料A', $rows[0]['material_name']);
+        $this->assertSame('20', $rows[0]['required_quantity']);
+        $this->assertSame('-2', $rows[0]['stock_quantity']);
+        $this->assertSame('22', $rows[0]['shortage_quantity']);
+        $this->assertSame('WO-001', $rows[0]['source_orders']);
+    }
+
+    public function testPlanningShortagePageShowsMaterialShortagesForLoggedInUser(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $inventory->record([
+            'material_id' => (string) $component['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '8',
+        ]);
+        $controller = new PlanningController(
+            new MaterialShortageService($workOrders, $inventory),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->shortages();
+
+        $this->assertStringContains('缺料分析', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('原料A', $html);
+        $this->assertStringContains('WO-001', $html);
+        $this->assertStringContains('12', $html);
+        $this->assertPrimaryNavigation($html);
+    }
+
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void
     {
         $materials = new InMemoryMaterialRepository();
@@ -1979,6 +2111,7 @@ final class FoundationTest extends TestCase
             'href="/erp/boms">BOM 管理',
             'href="/erp/purchases">采购订单',
             'href="/erp/work-orders">生产工单',
+            'href="/erp/planning/shortages">缺料分析',
             'href="/erp/inventory">库存流水',
             'href="/erp/inventory/balances">库存余额',
             'href="/erp/inventory/trace">批次追溯',
