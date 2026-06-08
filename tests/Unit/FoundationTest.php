@@ -366,6 +366,34 @@ final class FoundationTest extends TestCase
         $this->assertSame(null, (new AuthService($repository))->attempt('planner@example.com', 'PlannerPassword123'));
     }
 
+    public function testUserManagementServiceListsManagerSupervisorAndAdminRoles(): void
+    {
+        $service = new UserManagementService(new InMemoryUserRepository());
+
+        $roles = array_column($service->roles(), 'name', 'code');
+
+        $this->assertSame('管理员', $roles['admin']);
+        $this->assertSame('总经理', $roles['general_manager']);
+        $this->assertSame('主管', $roles['supervisor']);
+    }
+
+    public function testUserManagementServiceAllowsCreatingAdminWithSixCharacterPassword(): void
+    {
+        $repository = new InMemoryUserRepository();
+        $service = new UserManagementService($repository);
+
+        $user = $service->create([
+            'email' => 'new-admin@example.com',
+            'name' => '新增管理员',
+            'password' => '123456',
+            'role_code' => 'admin',
+        ]);
+
+        $this->assertSame('admin', $user['role_code']);
+        $this->assertSame('管理员', $user['role_name']);
+        $this->assertSame('new-admin@example.com', (new AuthService($repository))->attempt('new-admin@example.com', '123456')['email']);
+    }
+
     public function testUserManagementPageShowsListCreateFormAndStatusActions(): void
     {
         App::setBasePath('/erp');
@@ -386,6 +414,9 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('warehouse@example.com', $html);
         $this->assertStringContains('仓库员', $html);
         $this->assertStringContains('name="role_code"', $html);
+        $this->assertStringContains('<option value="admin">管理员</option>', $html);
+        $this->assertStringContains('<option value="general_manager">总经理</option>', $html);
+        $this->assertStringContains('<option value="supervisor">主管</option>', $html);
         $this->assertStringContains('action="/erp/users"', $html);
         $this->assertStringContains('action="/erp/users/status"', $html);
         $this->assertPrimaryNavigation($html);
@@ -409,6 +440,8 @@ final class FoundationTest extends TestCase
     {
         $this->assertSame(true, PermissionService::can(['role_code' => 'admin'], 'inventory.manage'));
         $this->assertSame(true, PermissionService::can(['role_code' => 'admin'], 'users.manage'));
+        $this->assertSame(true, PermissionService::can(['role_code' => 'general_manager'], 'users.manage'));
+        $this->assertSame(true, PermissionService::can(['role_code' => 'supervisor'], 'users.manage'));
         $this->assertSame(false, PermissionService::can(['role_code' => 'planner'], 'users.manage'));
         $this->assertSame(true, PermissionService::can(['role_code' => 'warehouse'], 'inventory.manage'));
         $this->assertSame(false, PermissionService::can(['role_code' => 'purchasing'], 'inventory.manage'));

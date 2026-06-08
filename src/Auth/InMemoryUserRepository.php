@@ -11,9 +11,11 @@ final class InMemoryUserRepository implements UserRepository
      */
     private array $roles = [
         'admin' => ['id' => 1, 'code' => 'admin', 'name' => '管理员'],
-        'planner' => ['id' => 2, 'code' => 'planner', 'name' => '计划员'],
-        'warehouse' => ['id' => 3, 'code' => 'warehouse', 'name' => '仓库员'],
-        'purchasing' => ['id' => 4, 'code' => 'purchasing', 'name' => '采购员'],
+        'general_manager' => ['id' => 2, 'code' => 'general_manager', 'name' => '总经理'],
+        'supervisor' => ['id' => 3, 'code' => 'supervisor', 'name' => '主管'],
+        'planner' => ['id' => 4, 'code' => 'planner', 'name' => '计划员'],
+        'warehouse' => ['id' => 5, 'code' => 'warehouse', 'name' => '仓库员'],
+        'purchasing' => ['id' => 6, 'code' => 'purchasing', 'name' => '采购员'],
     ];
 
     /**

@@ -10,6 +10,8 @@ final class PdoUserRepository implements UserRepository
 {
     private const DEFAULT_ROLES = [
         'admin' => '管理员',
+        'general_manager' => '总经理',
+        'supervisor' => '主管',
         'planner' => '计划员',
         'warehouse' => '仓库员',
         'purchasing' => '采购员',

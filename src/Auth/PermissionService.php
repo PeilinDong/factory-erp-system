@@ -11,6 +11,17 @@ final class PermissionService
      */
     private const ROLE_RULES = [
         'admin' => ['*'],
+        'general_manager' => ['*'],
+        'supervisor' => [
+            'users.manage',
+            'purchase.manage',
+            'purchase.receive',
+            'work_order.manage',
+            'work_order.issue',
+            'work_order.complete',
+            'planning.view',
+            'inventory.manage',
+        ],
         'planner' => ['work_order.manage', 'planning.view'],
         'warehouse' => ['inventory.manage', 'purchase.receive', 'work_order.issue', 'work_order.complete'],
         'purchasing' => ['purchase.manage', 'purchase.receive'],

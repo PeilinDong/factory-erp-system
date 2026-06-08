@@ -57,7 +57,7 @@ final class UserController
         <input type="hidden" name="csrf_token" value="{$csrf}">
         <label>邮箱 <input type="email" name="email" required placeholder="user@example.com"></label>
         <label>姓名 <input name="name" required placeholder="张三"></label>
-        <label>初始密码 <input type="password" name="password" required placeholder="至少 8 位"></label>
+        <label>初始密码 <input type="password" name="password" required placeholder="至少 6 位"></label>
         <label>角色
           <select name="role_code" required>{$roleOptions}</select>
         </label>

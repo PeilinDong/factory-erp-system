@@ -45,8 +45,8 @@ final class UserManagementService
             throw new \InvalidArgumentException('name is required');
         }
 
-        if (strlen($password) < 8) {
-            throw new \InvalidArgumentException('password must contain at least 8 characters');
+        if (strlen($password) < 6) {
+            throw new \InvalidArgumentException('password must contain at least 6 characters');
         }
 
         $roleCodes = array_column($this->roles(), 'code');
