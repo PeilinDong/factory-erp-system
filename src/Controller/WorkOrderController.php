@@ -48,13 +48,13 @@ final class WorkOrderController
   <section class="content">
     <p class="eyebrow">生产执行</p>
     <h1>生产工单</h1>
-    <p class="muted">根据 BOM 创建生产计划，按计划数量计算组件需求，并支持从指定仓库生成领料出库流水。</p>
+    <p class="muted">根据 BOM 创建生产计划，按计划数量计算组件需求，并支持领料出库和成品完工入库。</p>
     {$message}
     <section class="form-panel">
       <h2>新增工单</h2>
       <form class="material-form" method="post" action="{$action}">
         <input type="hidden" name="csrf_token" value="{$csrf}">
-        <label>工单号 <input name="order_no" required placeholder="WO-001"></label>
+        <label>工单编号 <input name="order_no" required placeholder="WO-001"></label>
         <label>选择 BOM
           <select name="bom_id" required>{$bomOptions}</select>
         </label>
@@ -66,7 +66,7 @@ final class WorkOrderController
     <section class="table-panel">
       <h2>工单列表</h2>
       <table>
-        <thead><tr><th>工单号</th><th>成品</th><th>计划数量</th><th>计划完成日</th><th>组件需求</th><th>状态</th><th>领料</th></tr></thead>
+        <thead><tr><th>工单编号</th><th>成品</th><th>计划数量</th><th>计划完成日</th><th>组件需求</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>{$rows}</tbody>
       </table>
     </section>
@@ -135,6 +135,37 @@ HTML;
         return '';
     }
 
+    /**
+     * @param null|array<string, string> $input
+     */
+    public function complete(?array $input = null): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        $input ??= $_POST;
+        if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
+            $this->redirector()->redirect(App::url('/work-orders?error=csrf'));
+            return '';
+        }
+
+        try {
+            $this->orders->complete(
+                (int) ($input['id'] ?? 0),
+                (int) ($input['warehouse_id'] ?? 0),
+                $this->inventory,
+            );
+            $this->redirector()->redirect(App::url('/work-orders?completed=1'));
+        } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
+            $this->redirector()->redirect(App::url('/work-orders?error=complete'));
+        }
+
+        return '';
+    }
+
     private function message(): string
     {
         if (isset($_GET['created'])) {
@@ -145,8 +176,12 @@ HTML;
             return '<p class="success">领料出库已生成。</p>';
         }
 
+        if (isset($_GET['completed'])) {
+            return '<p class="success">完工入库已生成。</p>';
+        }
+
         if (isset($_GET['error'])) {
-            return '<p class="error">工单处理失败，请检查工单号、BOM、仓库、计划数量和日期。</p>';
+            return '<p class="error">工单处理失败，请检查工单编号、BOM、仓库、计划数量和日期。</p>';
         }
 
         return '';
@@ -198,7 +233,7 @@ HTML;
 
         return implode('', array_map(function (array $order) use ($csrfToken, $warehouseOptions): string {
             $requirements = $this->requirementText($order['requirements']);
-            $issueForm = $this->issueForm($order, $csrfToken, $warehouseOptions);
+            $actions = $this->actionForms($order, $csrfToken, $warehouseOptions);
 
             return sprintf(
                 '<tr><td>%s</td><td>%s - %s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
@@ -209,7 +244,7 @@ HTML;
                 htmlspecialchars($order['due_date'], ENT_QUOTES, 'UTF-8'),
                 $requirements,
                 $this->statusLabel($order['status']),
-                $issueForm,
+                $actions,
             );
         }, $orders));
     }
@@ -217,22 +252,37 @@ HTML;
     /**
      * @param array{id:int,status:string} $order
      */
-    private function issueForm(array $order, string $csrfToken, string $warehouseOptions): string
+    private function actionForms(array $order, string $csrfToken, string $warehouseOptions): string
     {
-        if ($order['status'] === 'issued') {
-            return '<span class="muted">已领料</span>';
+        if ($order['status'] === 'completed') {
+            return '<span class="muted">已完工</span>';
         }
 
-        $action = htmlspecialchars(App::url('/work-orders/issue'), ENT_QUOTES, 'UTF-8');
+        return $this->operationForm('/work-orders/issue', '领料出库', $order, $csrfToken, $warehouseOptions)
+            . $this->operationForm('/work-orders/complete', '完工入库', $order, $csrfToken, $warehouseOptions);
+    }
+
+    /**
+     * @param array{id:int} $order
+     */
+    private function operationForm(
+        string $path,
+        string $button,
+        array $order,
+        string $csrfToken,
+        string $warehouseOptions,
+    ): string {
+        $action = htmlspecialchars(App::url($path), ENT_QUOTES, 'UTF-8');
         $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
         $id = (string) (int) $order['id'];
+        $label = htmlspecialchars($button, ENT_QUOTES, 'UTF-8');
 
         return <<<HTML
 <form class="inline-form" method="post" action="{$action}">
   <input type="hidden" name="csrf_token" value="{$csrf}">
   <input type="hidden" name="id" value="{$id}">
   <select name="warehouse_id" required>{$warehouseOptions}</select>
-  <button type="submit">领料出库</button>
+  <button type="submit">{$label}</button>
 </form>
 HTML;
     }
@@ -259,6 +309,7 @@ HTML;
         return [
             'planned' => '已计划',
             'issued' => '已领料',
+            'completed' => '已完工',
         ][$status] ?? htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
     }
 

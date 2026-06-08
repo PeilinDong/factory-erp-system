@@ -125,6 +125,7 @@ $router->post('/purchases', [$purchases, 'store']);
 $router->get('/work-orders', [$workOrders, 'index']);
 $router->post('/work-orders', [$workOrders, 'store']);
 $router->post('/work-orders/issue', [$workOrders, 'issue']);
+$router->post('/work-orders/complete', [$workOrders, 'complete']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
 $router->get('/inventory/balances', [$inventory, 'balances']);

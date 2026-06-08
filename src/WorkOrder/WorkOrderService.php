@@ -16,7 +16,7 @@ final class WorkOrderService
     }
 
     /**
-     * @return array<int, array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}>
+     * @return array<int, array{id:int,order_no:string,bom_id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}>
      */
     public function list(): array
     {
@@ -24,7 +24,7 @@ final class WorkOrderService
     }
 
     /**
-     * @return null|array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
+     * @return null|array{id:int,order_no:string,bom_id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
      */
     public function find(int $id): ?array
     {
@@ -35,7 +35,7 @@ final class WorkOrderService
 
     /**
      * @param array<string, string> $data
-     * @return array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}
+     * @return array{id:int,order_no:string,bom_id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}
      */
     public function create(array $data): array
     {
@@ -100,8 +100,35 @@ final class WorkOrderService
     }
 
     /**
+     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}
+     */
+    public function complete(int $id, int $warehouseId, InventoryService $inventory): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('work order must exist');
+        }
+
+        if ($warehouseId <= 0) {
+            throw new \InvalidArgumentException('warehouse must exist');
+        }
+
+        $transaction = $inventory->record([
+            'material_id' => (string) $order['parent_material_id'],
+            'warehouse_id' => (string) $warehouseId,
+            'transaction_type' => 'inbound',
+            'quantity' => $order['planned_quantity'],
+            'reference_no' => $order['order_no'],
+        ]);
+
+        $this->orders->setStatus($id, 'completed');
+
+        return $transaction;
+    }
+
+    /**
      * @param array{id:int,order_no:string,bom_id:int,planned_quantity:string,due_date:string,status:string} $order
-     * @return array{id:int,order_no:string,bom_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
+     * @return array{id:int,order_no:string,bom_id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
      */
     private function enrich(array $order): array
     {
@@ -112,6 +139,7 @@ final class WorkOrderService
             'id' => $order['id'],
             'order_no' => $order['order_no'],
             'bom_id' => $order['bom_id'],
+            'parent_material_id' => (int) ($bom['parent_material_id'] ?? 0),
             'parent_material_code' => (string) ($bom['parent_material_code'] ?? $order['bom_id']),
             'parent_material_name' => (string) ($bom['parent_material_name'] ?? ''),
             'planned_quantity' => $order['planned_quantity'],
