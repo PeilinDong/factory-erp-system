@@ -129,6 +129,7 @@ $router->post('/work-orders/complete', [$workOrders, 'complete']);
 $router->get('/inventory', [$inventory, 'index']);
 $router->post('/inventory', [$inventory, 'store']);
 $router->get('/inventory/balances', [$inventory, 'balances']);
+$router->get('/inventory/trace', [$inventory, 'trace']);
 $router->get('/health', [$dashboard, 'health']);
 
 return $router;

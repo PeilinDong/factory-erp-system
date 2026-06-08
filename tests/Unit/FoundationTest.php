@@ -107,6 +107,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('purchase_orders', $output);
         $this->assertStringContains('purchase_order_items', $output);
         $this->assertStringContains('work_orders', $output);
+        $this->assertStringContains('202606080001_add_inventory_batch_tracking.php', $output);
     }
 
     public function testLoginPageContainsChineseProductPositioning(): void
@@ -1439,6 +1440,7 @@ final class FoundationTest extends TestCase
             'transaction_type' => 'inbound',
             'quantity' => '10',
             'reference_no' => 'PO-001',
+            'batch_no' => 'LOT-20260608-A',
         ]);
         $service->record([
             'material_id' => (string) $material['id'],
@@ -1456,6 +1458,10 @@ final class FoundationTest extends TestCase
         ]);
 
         $this->assertSame(3, count($service->list()));
+        $this->assertSame('LOT-20260608-A', $service->list()[2]['batch_no']);
+        $traceRows = $service->traceBatch('LOT-20260608-A');
+        $this->assertSame(1, count($traceRows));
+        $this->assertSame('PO-001', $traceRows[0]['reference_no']);
         $this->assertSame('8.5', $service->stockBalance($material['id'], $warehouse['id']));
         $balances = $service->stockBalances();
         $this->assertSame(1, count($balances));
@@ -1551,6 +1557,7 @@ final class FoundationTest extends TestCase
             'transaction_type' => 'inbound',
             'quantity' => '10',
             'reference_no' => 'PO-001',
+            'batch_no' => 'LOT-001',
         ]);
         $controller = new InventoryController(
             $inventory,
@@ -1567,6 +1574,9 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('WH-001', $html);
         $this->assertStringContains('PO-001', $html);
+        $this->assertStringContains('LOT-001', $html);
+        $this->assertStringContains('name="batch_no"', $html);
+        $this->assertStringContains('href="/erp/inventory/trace?batch_no=LOT-001"', $html);
         $this->assertStringContains('action="/erp/inventory"', $html);
     }
 
@@ -1619,6 +1629,64 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('WH-001', $html);
         $this->assertStringContains('6', $html);
+    }
+
+    public function testInventoryTracePageShowsTransactionsForBatch(): void
+    {
+        App::setBasePath('/erp');
+        $_GET['batch_no'] = 'LOT-TRACE-001';
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Steel Screw',
+            'specification' => 'M6x20',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Main Warehouse',
+        ]);
+        $inventory = new InventoryService(
+            new InMemoryInventoryTransactionRepository(),
+            $materials,
+            $warehouses,
+        );
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '10',
+            'reference_no' => 'PO-TRACE',
+            'batch_no' => 'LOT-TRACE-001',
+        ]);
+        $inventory->record([
+            'material_id' => (string) $material['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'outbound',
+            'quantity' => '4',
+            'reference_no' => 'WO-TRACE',
+            'batch_no' => 'LOT-TRACE-001',
+        ]);
+        $controller = new InventoryController(
+            $inventory,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->trace();
+
+        $this->assertStringContains('批次追溯', $html);
+        $this->assertStringContains('LOT-TRACE-001', $html);
+        $this->assertStringContains('PO-TRACE', $html);
+        $this->assertStringContains('WO-TRACE', $html);
+        $this->assertStringContains('MAT-001', $html);
+        unset($_GET['batch_no']);
     }
 
     public function testSharedHostBuildCreatesSafeDeployLayout(): void

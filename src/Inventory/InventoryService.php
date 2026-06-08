@@ -19,7 +19,7 @@ final class InventoryService
     }
 
     /**
-     * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}>
+     * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}>
      */
     public function list(): array
     {
@@ -28,7 +28,7 @@ final class InventoryService
 
     /**
      * @param array<string, string> $data
-     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}
+     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}
      */
     public function record(array $data): array
     {
@@ -37,6 +37,7 @@ final class InventoryService
         $type = trim($data['transaction_type'] ?? '');
         $quantity = trim($data['quantity'] ?? '');
         $referenceNo = trim($data['reference_no'] ?? '');
+        $batchNo = strtoupper(trim($data['batch_no'] ?? ''));
 
         if (!$this->existsIn($materialId, $this->materials->list())) {
             throw new \InvalidArgumentException('material must exist');
@@ -54,13 +55,34 @@ final class InventoryService
             throw new \InvalidArgumentException('quantity must be greater than zero');
         }
 
+        if ($batchNo !== '' && !preg_match('/^[A-Z0-9][A-Z0-9._-]{0,63}$/', $batchNo)) {
+            throw new \InvalidArgumentException('batch number is invalid');
+        }
+
         return $this->transactions->create([
             'material_id' => $materialId,
             'warehouse_id' => $warehouseId,
             'transaction_type' => $type,
             'quantity' => $this->normalizeQuantity($quantity),
             'reference_no' => $referenceNo,
+            'batch_no' => $batchNo,
         ]);
+    }
+
+    /**
+     * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}>
+     */
+    public function traceBatch(string $batchNo): array
+    {
+        $normalized = strtoupper(trim($batchNo));
+        if ($normalized === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            $this->transactions->list(),
+            static fn (array $transaction): bool => strtoupper($transaction['batch_no'] ?? '') === $normalized,
+        ));
     }
 
     public function stockBalance(int $materialId, int $warehouseId): string

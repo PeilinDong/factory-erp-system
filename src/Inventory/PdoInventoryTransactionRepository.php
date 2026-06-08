@@ -15,7 +15,7 @@ final class PdoInventoryTransactionRepository implements InventoryTransactionRep
     public function list(): array
     {
         $statement = $this->pdo->query(
-            'SELECT id, material_id, warehouse_id, transaction_type, quantity, reference_no, occurred_at
+            'SELECT id, material_id, warehouse_id, transaction_type, quantity, reference_no, batch_no, occurred_at
              FROM inventory_transactions
              ORDER BY id DESC
              LIMIT 100'
@@ -28,6 +28,7 @@ final class PdoInventoryTransactionRepository implements InventoryTransactionRep
             'transaction_type' => (string) $row['transaction_type'],
             'quantity' => self::formatQuantity((string) $row['quantity']),
             'reference_no' => (string) ($row['reference_no'] ?? ''),
+            'batch_no' => (string) ($row['batch_no'] ?? ''),
             'occurred_at' => (string) $row['occurred_at'],
         ], $statement->fetchAll());
     }
@@ -36,9 +37,9 @@ final class PdoInventoryTransactionRepository implements InventoryTransactionRep
     {
         $statement = $this->pdo->prepare(
             'INSERT INTO inventory_transactions
-                (material_id, warehouse_id, transaction_type, quantity, reference_no, occurred_at)
+                (material_id, warehouse_id, transaction_type, quantity, reference_no, batch_no, occurred_at)
              VALUES
-                (:material_id, :warehouse_id, :transaction_type, :quantity, :reference_no, CURRENT_TIMESTAMP)'
+                (:material_id, :warehouse_id, :transaction_type, :quantity, :reference_no, :batch_no, CURRENT_TIMESTAMP)'
         );
         $statement->execute([
             'material_id' => $data['material_id'],
@@ -46,6 +47,7 @@ final class PdoInventoryTransactionRepository implements InventoryTransactionRep
             'transaction_type' => $data['transaction_type'],
             'quantity' => $data['quantity'],
             'reference_no' => $data['reference_no'],
+            'batch_no' => $data['batch_no'],
         ]);
 
         return [
@@ -55,6 +57,7 @@ final class PdoInventoryTransactionRepository implements InventoryTransactionRep
             'transaction_type' => $data['transaction_type'],
             'quantity' => $data['quantity'],
             'reference_no' => $data['reference_no'],
+            'batch_no' => $data['batch_no'],
             'occurred_at' => date('Y-m-d H:i:s'),
         ];
     }
