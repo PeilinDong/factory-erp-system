@@ -7,6 +7,7 @@ namespace Erp\Controller;
 use Erp\Auth\NativeSessionStore;
 use Erp\Auth\SessionStore;
 use Erp\Core\App;
+use Erp\Core\Sidebar;
 use Erp\Core\View;
 use Erp\Http\NativeRedirector;
 use Erp\Http\Redirector;
@@ -36,10 +37,11 @@ final class MaterialController
         $action = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $searchAction = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $queryValue = htmlspecialchars($query, ENT_QUOTES, 'UTF-8');
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">基础资料</p>
     <h1>物料档案</h1>
@@ -107,10 +109,11 @@ HTML;
         $specification = htmlspecialchars($material['specification'], ENT_QUOTES, 'UTF-8');
         $baseUnit = htmlspecialchars($material['base_unit'], ENT_QUOTES, 'UTF-8');
         $typeOptions = $this->materialTypeOptions($material['material_type']);
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">基础资料</p>
     <h1>编辑物料</h1>
@@ -303,27 +306,4 @@ HTML;
         }, array_keys($types), $types));
     }
 
-    private function sidebar(): string
-    {
-        $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
-        $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
-        $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
-        $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
-        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
-        $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
-
-        return <<<HTML
-<aside class="sidebar">
-  <strong>Factory ERP</strong>
-  <nav>
-    <a href="{$home}">仪表盘</a>
-    <a href="{$materials}">物料档案</a>
-    <a href="{$warehouses}">仓库档案</a>
-    <a href="{$inventory}">库存流水</a>
-    <a href="{$balances}">库存余额</a>
-    <a href="{$health}">健康检查</a>
-  </nav>
-</aside>
-HTML;
-    }
 }

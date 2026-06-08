@@ -7,6 +7,7 @@ namespace Erp\Controller;
 use Erp\Auth\NativeSessionStore;
 use Erp\Auth\SessionStore;
 use Erp\Core\App;
+use Erp\Core\Sidebar;
 use Erp\Core\View;
 use Erp\Http\NativeRedirector;
 use Erp\Http\Redirector;
@@ -41,10 +42,11 @@ final class InventoryController
         $materialOptions = $this->materialOptions($materials);
         $warehouseOptions = $this->warehouseOptions($warehouses);
         $rows = $this->transactionRows($this->inventory->list(), $materials, $warehouses);
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">库存管理</p>
     <h1>库存流水</h1>
@@ -96,10 +98,11 @@ HTML;
         }
 
         $rows = $this->balanceRows($this->inventory->stockBalances());
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">库存管理</p>
     <h1>库存余额</h1>
@@ -132,10 +135,11 @@ HTML;
         $batchValue = htmlspecialchars($batchNo, ENT_QUOTES, 'UTF-8');
         $action = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
         $rows = $this->transactionRows($this->inventory->traceBatch($batchNo), $materials, $warehouses);
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">库存追溯</p>
     <h1>批次追溯</h1>
@@ -323,35 +327,4 @@ HTML;
         ][$type] ?? $type;
     }
 
-    private function sidebar(): string
-    {
-        $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
-        $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
-        $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
-        $boms = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
-        $purchases = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
-        $workOrders = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
-        $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
-        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
-        $trace = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
-        $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
-
-        return <<<HTML
-<aside class="sidebar">
-  <strong>Factory ERP</strong>
-  <nav>
-    <a href="{$home}">仪表盘</a>
-    <a href="{$materials}">物料档案</a>
-    <a href="{$warehouses}">仓库档案</a>
-    <a href="{$boms}">BOM 管理</a>
-    <a href="{$purchases}">采购订单</a>
-    <a href="{$workOrders}">生产工单</a>
-    <a href="{$inventory}">库存流水</a>
-    <a href="{$balances}">库存余额</a>
-    <a href="{$trace}">批次追溯</a>
-    <a href="{$health}">健康检查</a>
-  </nav>
-</aside>
-HTML;
-    }
 }

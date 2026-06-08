@@ -8,6 +8,7 @@ use Erp\Auth\NativeSessionStore;
 use Erp\Auth\SessionStore;
 use Erp\Bom\BomService;
 use Erp\Core\App;
+use Erp\Core\Sidebar;
 use Erp\Core\View;
 use Erp\Http\NativeRedirector;
 use Erp\Http\Redirector;
@@ -41,10 +42,11 @@ final class WorkOrderController
         $warehouseOptions = $this->warehouseOptions($this->warehouses->list());
         $rows = $this->orderRows($this->orders->list(), $session->csrfToken(), $warehouseOptions);
         $message = $this->message();
+        $sidebar = Sidebar::render();
 
         $body = <<<HTML
 <main class="app-shell">
-  {$this->sidebar()}
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">生产执行</p>
     <h1>生产工单</h1>
@@ -311,36 +313,6 @@ HTML;
             'issued' => '已领料',
             'completed' => '已完工',
         ][$status] ?? htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
-    }
-
-    private function sidebar(): string
-    {
-        $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
-        $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
-        $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
-        $boms = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
-        $purchases = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
-        $workOrders = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
-        $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
-        $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
-        $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
-
-        return <<<HTML
-<aside class="sidebar">
-  <strong>Factory ERP</strong>
-  <nav>
-    <a href="{$home}">仪表盘</a>
-    <a href="{$materials}">物料档案</a>
-    <a href="{$warehouses}">仓库档案</a>
-    <a href="{$boms}">BOM 管理</a>
-    <a href="{$purchases}">采购订单</a>
-    <a href="{$workOrders}">生产工单</a>
-    <a href="{$inventory}">库存流水</a>
-    <a href="{$balances}">库存余额</a>
-    <a href="{$health}">健康检查</a>
-  </nav>
-</aside>
-HTML;
     }
 
     private function session(): SessionStore

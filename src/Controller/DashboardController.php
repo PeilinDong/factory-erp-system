@@ -7,6 +7,7 @@ namespace Erp\Controller;
 use Erp\Auth\NativeSessionStore;
 use Erp\Auth\SessionStore;
 use Erp\Core\App;
+use Erp\Core\Sidebar;
 use Erp\Core\View;
 use Erp\Http\NativeRedirector;
 use Erp\Http\Redirector;
@@ -32,10 +33,7 @@ final class DashboardController
 
         $metrics = $this->metrics();
         $name = htmlspecialchars($user['name'], ENT_QUOTES, 'UTF-8');
-        $csrf = htmlspecialchars($session->csrfToken(), ENT_QUOTES, 'UTF-8');
-        $logoutAction = htmlspecialchars(App::url('/logout'), ENT_QUOTES, 'UTF-8');
-        $homeUrl = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
-        $healthUrl = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
+        $sidebar = Sidebar::render($session->csrfToken(), App::url('/logout'));
         $materialsUrl = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehousesUrl = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
         $bomsUrl = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
@@ -43,27 +41,11 @@ final class DashboardController
         $workOrdersUrl = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
         $inventoryUrl = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balancesUrl = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
+        $traceUrl = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
 
         $body = <<<HTML
 <main class="app-shell">
-  <aside class="sidebar">
-    <strong>Factory ERP</strong>
-    <nav>
-      <a href="{$homeUrl}">仪表盘</a>
-      <a href="{$materialsUrl}">物料档案</a>
-      <a href="{$warehousesUrl}">仓库档案</a>
-      <a href="{$bomsUrl}">BOM 管理</a>
-      <a href="{$purchasesUrl}">采购订单</a>
-      <a href="{$workOrdersUrl}">生产工单</a>
-      <a href="{$inventoryUrl}">库存流水</a>
-      <a href="{$balancesUrl}">库存余额</a>
-      <a href="{$healthUrl}">健康检查</a>
-    </nav>
-    <form class="logout-form" method="post" action="{$logoutAction}">
-      <input type="hidden" name="csrf_token" value="{$csrf}">
-      <button type="submit">退出登录</button>
-    </form>
-  </aside>
+  {$sidebar}
   <section class="content">
     <p class="eyebrow">生产工作台</p>
     <h1>今天需要关注的运营状态</h1>
@@ -74,7 +56,7 @@ final class DashboardController
       <article><span>库存流水</span><strong>{$metrics['transaction_count']} 条</strong></article>
       <article><span>待完工入库</span><strong>0 张</strong></article>
     </div>
-    <p class="muted empty-note">库存指标已根据库存流水实时汇总，BOM、采购订单和生产工单已接入，领料与采购建议将在后续模块继续补齐。</p>
+    <p class="muted empty-note">库存指标已根据库存流水实时计算。BOM、采购订单和生产工单已经接入，后续会继续补强审批、成本和追溯报表。</p>
     <section class="quick-panel">
       <h2>快捷入口</h2>
       <div class="quick-grid">
@@ -85,6 +67,7 @@ final class DashboardController
         <a href="{$workOrdersUrl}">生产工单</a>
         <a href="{$inventoryUrl}">库存流水</a>
         <a href="{$balancesUrl}">库存余额</a>
+        <a href="{$traceUrl}">批次追溯</a>
       </div>
     </section>
   </section>

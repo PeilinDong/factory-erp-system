@@ -463,6 +463,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('name="csrf_token"', $html);
         $this->assertStringContains('action="/erp/materials"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testMaterialPageProvidesEditAndStatusActions(): void
@@ -653,6 +654,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/warehouses"', $html);
         $this->assertStringNotContains('Warehouse Master', $html);
         $this->assertStringNotContains('Save Warehouse', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testWarehousePageProvidesEditAndStatusActions(): void
@@ -837,6 +839,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('action="/erp/boms"', $html);
         $this->assertStringContains('name="component_material_id"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testBomControllerStoresBomAndRedirects(): void
@@ -978,6 +981,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/purchases/receive"', $html);
         $this->assertStringContains('name="unit_price"', $html);
         $this->assertStringContains('name="batch_no"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testPurchaseControllerStoresOrderAndRedirects(): void
@@ -1266,6 +1270,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/work-orders"', $html);
         $this->assertStringContains('action="/erp/work-orders/complete"', $html);
         $this->assertStringContains('name="planned_quantity"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testWorkOrderControllerStoresOrderAndRedirects(): void
@@ -1829,6 +1834,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('name="batch_no"', $html);
         $this->assertStringContains('href="/erp/inventory/trace?batch_no=LOT-001"', $html);
         $this->assertStringContains('action="/erp/inventory"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testInventoryBalancePageShowsCurrentStockForLoggedInUser(): void
@@ -1962,6 +1968,24 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('Require all denied', file_get_contents($output . '/_app/.htaccess') ?: '');
 
         $this->removeDirectory($output);
+    }
+
+    private function assertPrimaryNavigation(string $html): void
+    {
+        foreach ([
+            'href="/erp/">仪表盘',
+            'href="/erp/materials">物料档案',
+            'href="/erp/warehouses">仓库档案',
+            'href="/erp/boms">BOM 管理',
+            'href="/erp/purchases">采购订单',
+            'href="/erp/work-orders">生产工单',
+            'href="/erp/inventory">库存流水',
+            'href="/erp/inventory/balances">库存余额',
+            'href="/erp/inventory/trace">批次追溯',
+            'href="/erp/health">健康检查',
+        ] as $link) {
+            $this->assertStringContains($link, $html);
+        }
     }
 
     private function removeDirectory(string $directory): void
