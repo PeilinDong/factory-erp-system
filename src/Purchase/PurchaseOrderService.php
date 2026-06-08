@@ -81,6 +81,10 @@ final class PurchaseOrderService
             throw new \InvalidArgumentException('purchase order must exist');
         }
 
+        if ($order['status'] === 'received') {
+            throw new \InvalidArgumentException('purchase order is already received');
+        }
+
         if ($warehouseId <= 0) {
             throw new \InvalidArgumentException('warehouse must exist');
         }

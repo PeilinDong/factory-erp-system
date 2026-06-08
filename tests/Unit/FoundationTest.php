@@ -1055,6 +1055,45 @@ final class FoundationTest extends TestCase
         $this->assertSame('received', $service->list()[0]['status']);
     }
 
+    public function testPurchaseOrderServiceRejectsDuplicateReceive(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-005',
+            'material_id' => (string) $material['id'],
+            'quantity' => '8',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $service->receive($order['id'], $warehouse['id'], 'LOT-PO-005', $inventory);
+
+        try {
+            $service->receive($order['id'], $warehouse['id'], 'LOT-PO-005-B', $inventory);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('already received', $exception->getMessage());
+            $this->assertSame('8', $inventory->stockBalance($material['id'], $warehouse['id']));
+            $this->assertSame(1, count($inventory->list()));
+            return;
+        }
+
+        throw new \RuntimeException('Expected duplicate purchase receive to be rejected');
+    }
+
     public function testPurchaseControllerReceivesOrderAndRedirects(): void
     {
         App::setBasePath('/erp');
@@ -1336,6 +1375,61 @@ final class FoundationTest extends TestCase
         $this->assertSame('issued', $workOrders->list()[0]['status']);
     }
 
+    public function testWorkOrderServiceRejectsDuplicateMaterialIssue(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $order = $workOrders->create([
+            'order_no' => 'WO-005',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '5',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $workOrders->issueMaterials($order['id'], $warehouse['id'], $inventory);
+
+        try {
+            $workOrders->issueMaterials($order['id'], $warehouse['id'], $inventory);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('already issued', $exception->getMessage());
+            $this->assertSame('-10', $inventory->stockBalance($component['id'], $warehouse['id']));
+            $this->assertSame(1, count($inventory->list()));
+            return;
+        }
+
+        throw new \RuntimeException('Expected duplicate work order material issue to be rejected');
+    }
+
     public function testWorkOrderControllerIssuesMaterialsAndRedirects(): void
     {
         App::setBasePath('/erp');
@@ -1449,6 +1543,61 @@ final class FoundationTest extends TestCase
         $this->assertSame('WO-003', $transaction['reference_no']);
         $this->assertSame('10', $inventory->stockBalance($parent['id'], $warehouse['id']));
         $this->assertSame('completed', $workOrders->list()[0]['status']);
+    }
+
+    public function testWorkOrderServiceRejectsDuplicateCompletion(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-FG',
+            'name' => '成品仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $order = $workOrders->create([
+            'order_no' => 'WO-006',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '5',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $workOrders->complete($order['id'], $warehouse['id'], $inventory);
+
+        try {
+            $workOrders->complete($order['id'], $warehouse['id'], $inventory);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('already completed', $exception->getMessage());
+            $this->assertSame('5', $inventory->stockBalance($parent['id'], $warehouse['id']));
+            $this->assertSame(1, count($inventory->list()));
+            return;
+        }
+
+        throw new \RuntimeException('Expected duplicate work order completion to be rejected');
     }
 
     public function testWorkOrderControllerCompletesOrderAndRedirects(): void

@@ -79,6 +79,10 @@ final class WorkOrderService
             throw new \InvalidArgumentException('work order must exist');
         }
 
+        if ($order['status'] === 'issued' || $order['status'] === 'completed') {
+            throw new \InvalidArgumentException('work order is already issued');
+        }
+
         if ($warehouseId <= 0) {
             throw new \InvalidArgumentException('warehouse must exist');
         }
@@ -107,6 +111,10 @@ final class WorkOrderService
         $order = $this->find($id);
         if ($order === null) {
             throw new \InvalidArgumentException('work order must exist');
+        }
+
+        if ($order['status'] === 'completed') {
+            throw new \InvalidArgumentException('work order is already completed');
         }
 
         if ($warehouseId <= 0) {
