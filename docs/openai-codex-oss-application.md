@@ -45,6 +45,7 @@ The repository currently includes:
 - CLI operations for health checks, migrations, and administrator creation.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.
+- GitHub Actions workflow for running PHP tests on push and pull requests.
 
 The project is still early alpha. The most important missing workflows are purchasing suggestions, richer purchase and work order status control, Excel import/export, cost reporting, operation audit logs, data-scope permissions, installer flow, and production hardening.
 
@@ -67,14 +68,14 @@ Codex is especially valuable here because ERP systems require many small, connec
 
 Good near-term tasks include:
 
-1. Material and warehouse search.
-2. Edit and enable/disable actions for master data.
-3. Excel import/export for early adopter data migration.
-4. BOM foundation and BOM expansion.
-5. Purchasing suggestion workflow.
-6. Work order foundation.
-7. Additional tests for authentication, validation, and inventory rules.
-8. Documentation for installation, deployment, and contribution workflows.
+1. Operation audit logs for critical ERP actions.
+2. Purchasing suggestions generated from shortage analysis.
+3. Excel import/export for master data and inventory balances.
+4. Purchase order status workflow with partial receipt support.
+5. Work order status workflow with return and supplement issue support.
+6. Basic work order material cost summaries.
+7. Data-scope permissions by warehouse or document type.
+8. Installer, upgrade, backup, and restore guidance.
 
 ## Commitment To Accuracy
 

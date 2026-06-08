@@ -48,6 +48,7 @@ Implemented so far:
 - CLI commands: `health`, `migrate`, and `create-admin`.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.
+- GitHub Actions workflow for running PHP tests on push and pull requests.
 
 Not implemented yet:
 
