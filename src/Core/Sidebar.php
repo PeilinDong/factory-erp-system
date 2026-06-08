@@ -18,6 +18,7 @@ final class Sidebar
         $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $trace = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
+        $users = htmlspecialchars(App::url('/users'), ENT_QUOTES, 'UTF-8');
         $health = htmlspecialchars(App::url('/health'), ENT_QUOTES, 'UTF-8');
         $logoutForm = '';
 
@@ -46,6 +47,7 @@ HTML;
     <a href="{$inventory}">库存流水</a>
     <a href="{$balances}">库存余额</a>
     <a href="{$trace}">批次追溯</a>
+    <a href="{$users}">用户管理</a>
     <a href="{$health}">健康检查</a>
   </nav>
 {$logoutForm}

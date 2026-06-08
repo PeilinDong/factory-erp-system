@@ -8,11 +8,13 @@ use Erp\Cli\Application;
 use Erp\Auth\AuthService;
 use Erp\Auth\InMemoryUserRepository;
 use Erp\Auth\InMemorySessionStore;
+use Erp\Auth\UserManagementService;
 use Erp\Core\App;
 use Erp\Core\Config;
 use Erp\Core\Router;
 use Erp\Http\InMemoryRedirector;
 use Erp\Controller\AuthController;
+use Erp\Controller\UserController;
 use Erp\Controller\DashboardController;
 use Erp\Controller\MaterialController;
 use Erp\Material\InMemoryMaterialRepository;
@@ -335,6 +337,56 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('Admin account validated for admin@goenn.online', $output);
         $this->assertStringContains('Password hash algorithm:', $output);
+    }
+
+    public function testUserManagementServiceCreatesUsersWithRolesAndTogglesStatus(): void
+    {
+        $repository = new InMemoryUserRepository();
+        $service = new UserManagementService($repository);
+
+        $user = $service->create([
+            'email' => 'planner@example.com',
+            'name' => '计划员',
+            'password' => 'PlannerPassword123',
+            'role_code' => 'planner',
+        ]);
+
+        $this->assertSame('planner@example.com', $user['email']);
+        $this->assertSame('计划员', $user['name']);
+        $this->assertSame('planner', $user['role_code']);
+        $this->assertSame('计划员', $user['role_name']);
+        $this->assertSame(1, $user['is_active']);
+        $this->assertSame(1, count($service->list()));
+
+        $disabled = $service->setActive($user['id'], false);
+
+        $this->assertSame(0, $disabled['is_active']);
+        $this->assertSame(null, (new AuthService($repository))->attempt('planner@example.com', 'PlannerPassword123'));
+    }
+
+    public function testUserManagementPageShowsListCreateFormAndStatusActions(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new UserManagementService(new InMemoryUserRepository());
+        $service->create([
+            'email' => 'warehouse@example.com',
+            'name' => '仓库员',
+            'password' => 'WarehousePassword123',
+            'role_code' => 'warehouse',
+        ]);
+        $controller = new UserController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('用户管理', $html);
+        $this->assertStringContains('warehouse@example.com', $html);
+        $this->assertStringContains('仓库员', $html);
+        $this->assertStringContains('name="role_code"', $html);
+        $this->assertStringContains('action="/erp/users"', $html);
+        $this->assertStringContains('action="/erp/users/status"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testMaterialServiceCreatesAndListsMaterials(): void
@@ -2115,6 +2167,7 @@ final class FoundationTest extends TestCase
             'href="/erp/inventory">库存流水',
             'href="/erp/inventory/balances">库存余额',
             'href="/erp/inventory/trace">批次追溯',
+            'href="/erp/users">用户管理',
             'href="/erp/health">健康检查',
         ] as $link) {
             $this->assertStringContains($link, $html);

@@ -29,6 +29,7 @@ Current implemented modules:
 - Stock balance page.
 - Batch traceability page.
 - Basic material shortage analysis for planned work orders.
+- User management foundation.
 - Dashboard inventory metrics.
 
 ## Phase 1 - Inventory Foundation
@@ -140,6 +141,11 @@ Goals:
 - More complete automated test coverage.
 - UI accessibility review.
 - Production deployment checklist.
+
+Current status:
+
+- Basic user management with role assignment and enable/disable actions is implemented.
+- Fine-grained permission checks, operation audit logs, and data-scope controls are not implemented yet.
 
 Why this phase matters:
 

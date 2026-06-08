@@ -43,6 +43,7 @@ final class DashboardController
         $inventoryUrl = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balancesUrl = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $traceUrl = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
+        $usersUrl = htmlspecialchars(App::url('/users'), ENT_QUOTES, 'UTF-8');
 
         $body = <<<HTML
 <main class="app-shell">
@@ -70,6 +71,7 @@ final class DashboardController
         <a href="{$inventoryUrl}">库存流水</a>
         <a href="{$balancesUrl}">库存余额</a>
         <a href="{$traceUrl}">批次追溯</a>
+        <a href="{$usersUrl}">用户管理</a>
       </div>
     </section>
   </section>
