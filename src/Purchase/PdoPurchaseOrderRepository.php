@@ -29,6 +29,26 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
         return $orders;
     }
 
+    public function find(int $id): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, order_no, supplier_name, expected_date, status
+             FROM purchase_orders
+             WHERE id = :id
+             LIMIT 1'
+        );
+        $statement->execute(['id' => $id]);
+        $row = $statement->fetch();
+        if (!is_array($row)) {
+            return null;
+        }
+
+        $order = $this->mapOrderRow($row);
+        $order['items'] = $this->itemsFor($id);
+
+        return $order;
+    }
+
     public function create(array $data): array
     {
         $this->pdo->beginTransaction();
@@ -72,6 +92,22 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
         }
 
         throw new \RuntimeException('purchase order not found');
+    }
+
+    public function setStatus(int $id, string $status): array
+    {
+        $statement = $this->pdo->prepare('UPDATE purchase_orders SET status = :status WHERE id = :id');
+        $statement->execute([
+            'id' => $id,
+            'status' => $status,
+        ]);
+
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        return $order;
     }
 
     /**

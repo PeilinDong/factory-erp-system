@@ -953,9 +953,16 @@ final class FoundationTest extends TestCase
             'quantity' => '10',
             'unit_price' => '12.5',
         ]);
+        $warehouses = new InMemoryWarehouseRepository();
+        $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
         $controller = new PurchaseController(
             $service,
             new MaterialService($materials),
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
             $session,
             new InMemoryRedirector(),
         );
@@ -968,7 +975,9 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('上海供应商', $html);
         $this->assertStringContains('125', $html);
         $this->assertStringContains('action="/erp/purchases"', $html);
+        $this->assertStringContains('action="/erp/purchases/receive"', $html);
         $this->assertStringContains('name="unit_price"', $html);
+        $this->assertStringContains('name="batch_no"', $html);
     }
 
     public function testPurchaseControllerStoresOrderAndRedirects(): void
@@ -986,7 +995,15 @@ final class FoundationTest extends TestCase
         ]);
         $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
         $redirector = new InMemoryRedirector();
-        $controller = new PurchaseController($service, new MaterialService($materials), $session, $redirector);
+        $warehouses = new InMemoryWarehouseRepository();
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
+            $session,
+            $redirector,
+        );
 
         $controller->store([
             'csrf_token' => $session->csrfToken(),
@@ -1000,6 +1017,91 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/purchases?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
+    }
+
+    public function testPurchaseOrderServiceReceivesOrderToInventory(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-003',
+            'material_id' => (string) $material['id'],
+            'quantity' => '8',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $transactions = $service->receive($order['id'], $warehouse['id'], 'lot-po-003', $inventory);
+
+        $this->assertSame(1, count($transactions));
+        $this->assertSame('inbound', $transactions[0]['transaction_type']);
+        $this->assertSame('8', $transactions[0]['quantity']);
+        $this->assertSame('PO-003', $transactions[0]['reference_no']);
+        $this->assertSame('LOT-PO-003', $transactions[0]['batch_no']);
+        $this->assertSame('8', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('received', $service->list()[0]['status']);
+    }
+
+    public function testPurchaseControllerReceivesOrderAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => '上海供应商',
+            'order_no' => 'PO-004',
+            'material_id' => (string) $material['id'],
+            'quantity' => '6',
+            'unit_price' => '10',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $redirector = new InMemoryRedirector();
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $inventory,
+            $session,
+            $redirector,
+        );
+
+        $controller->receive([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $order['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'batch_no' => 'LOT-PO-004',
+        ]);
+
+        $this->assertSame('/erp/purchases?received=1', $redirector->lastLocation());
+        $this->assertSame('6', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('received', $service->list()[0]['status']);
     }
 
     public function testWorkOrderServiceCreatesOrderFromBomWithRequirements(): void

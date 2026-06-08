@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Erp\Purchase;
 
+use Erp\Inventory\InventoryService;
 use Erp\Material\MaterialRepository;
 
 final class PurchaseOrderService
@@ -20,6 +21,16 @@ final class PurchaseOrderService
     public function list(): array
     {
         return array_map($this->enrich(...), $this->orders->list());
+    }
+
+    /**
+     * @return null|array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    public function find(int $id): ?array
+    {
+        $order = $this->orders->find($id);
+
+        return $order === null ? null : $this->enrich($order);
     }
 
     /**
@@ -58,6 +69,37 @@ final class PurchaseOrderService
             'status' => 'draft',
             'items' => $items,
         ]));
+    }
+
+    /**
+     * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}>
+     */
+    public function receive(int $id, int $warehouseId, string $batchNo, InventoryService $inventory): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if ($warehouseId <= 0) {
+            throw new \InvalidArgumentException('warehouse must exist');
+        }
+
+        $transactions = [];
+        foreach ($order['items'] as $item) {
+            $transactions[] = $inventory->record([
+                'material_id' => (string) $item['material_id'],
+                'warehouse_id' => (string) $warehouseId,
+                'transaction_type' => 'inbound',
+                'quantity' => $item['quantity'],
+                'reference_no' => $order['order_no'],
+                'batch_no' => $batchNo,
+            ]);
+        }
+
+        $this->orders->setStatus($id, 'received');
+
+        return $transactions;
     }
 
     /**

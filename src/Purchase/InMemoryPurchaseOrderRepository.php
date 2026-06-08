@@ -18,6 +18,11 @@ final class InMemoryPurchaseOrderRepository implements PurchaseOrderRepository
         return array_values($this->orders);
     }
 
+    public function find(int $id): ?array
+    {
+        return $this->orders[$id] ?? null;
+    }
+
     public function create(array $data): array
     {
         $orderId = count($this->orders) + 1;
@@ -41,6 +46,19 @@ final class InMemoryPurchaseOrderRepository implements PurchaseOrderRepository
             'items' => $items,
         ];
         $this->orders[$orderId] = $order;
+
+        return $order;
+    }
+
+    public function setStatus(int $id, string $status): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        $order['status'] = $status;
+        $this->orders[$id] = $order;
 
         return $order;
     }
