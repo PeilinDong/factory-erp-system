@@ -1,5 +1,7 @@
 # Product Design Audit - 2026-06-07
 
+Historical note: this audit reflects the interface state on 2026-06-07. Several findings have since been addressed, including dashboard dead links, material search, material edit, material enable/disable, warehouse master, inventory transactions, BOM, purchase order, work order, shortage analysis, and user management. See `docs/system-design-review-2026-06-12.md` for the current implementation review.
+
 ## Audit Scope
 
 - Product: Factory ERP MVP for Chinese small and mid-sized manufacturing companies.

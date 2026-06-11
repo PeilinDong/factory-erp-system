@@ -41,7 +41,7 @@ The repository currently includes:
 - Inventory transaction entry for inbound, outbound, and adjustment records.
 - Stock balance page and dashboard inventory metrics.
 - BOM, purchase order, production work order, batch traceability, and basic material shortage analysis foundations.
-- User management foundation with role assignment, enable/disable actions, and key operation permission checks.
+- User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; and key operation permission checks.
 - CLI operations for health checks, migrations, and administrator creation.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.

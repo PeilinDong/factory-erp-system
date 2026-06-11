@@ -34,7 +34,7 @@ Current tests verify:
 18. BOM, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
 19. Batch traceability and shared primary navigation coverage.
 20. Basic material shortage analysis for planned work orders.
-21. User management foundation with role assignment, enable/disable actions, and key operation permission checks.
+21. User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; six-character development password coverage for admin creation; and key operation permission checks.
 
 ## Verification Commands
 

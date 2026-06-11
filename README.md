@@ -41,7 +41,7 @@ Implemented so far:
 - Stock balance page by material and warehouse.
 - Batch traceability page.
 - Basic material shortage analysis for planned work orders.
-- User management foundation with basic role assignment, enable/disable actions, and role checks for key operations.
+- User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; and role checks for key operations.
 - Dashboard inventory metrics backed by inventory transactions.
 - MariaDB-compatible foundation migrations.
 - CLI entrypoint: `bin/erpctl`.
@@ -143,6 +143,7 @@ More details:
 - [Development Guide](docs/development.md)
 - [Testing Guide](docs/testing.md)
 - [Deployment Guide](docs/deployment.md)
+- [System Design Review](docs/system-design-review-2026-06-12.md)
 
 ## Roadmap
 

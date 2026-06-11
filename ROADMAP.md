@@ -144,7 +144,7 @@ Goals:
 
 Current status:
 
-- Basic user management with role assignment and enable/disable actions is implemented.
+- Basic user management with administrator, general manager, supervisor, planner, warehouse, and purchasing roles is implemented, including enable/disable actions and key operation permission checks.
 - Key operation permission checks are implemented for user management, purchasing, inventory, and work order actions.
 - Operation audit logs and data-scope controls are not implemented yet.
 
