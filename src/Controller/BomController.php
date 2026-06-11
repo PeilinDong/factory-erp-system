@@ -45,12 +45,14 @@ final class BomController
   <section class="content">
     <p class="eyebrow">生产资料</p>
     <h1>BOM 管理</h1>
-    <p class="muted">维护成品与组件用量关系。当前早期版本先支持一条组件明细，后续会扩展多行组件、版本生效和工单齐套分析。</p>
+    <p class="muted">按项目维护成品与组件用量关系。当前早期版本先支持一条组件明细，后续会扩展多行组件、版本生效和工单齐套分析。</p>
     {$message}
     <section class="form-panel">
       <h2>新增 BOM</h2>
       <form class="material-form" method="post" action="{$action}">
         <input type="hidden" name="csrf_token" value="{$csrf}">
+        <label>项目编号 <input name="project_code" required placeholder="PRJ-001"></label>
+        <label>项目名称 <input name="project_name" required placeholder="客户项目A"></label>
         <label>成品物料
           <select name="parent_material_id" required>{$materialOptions}</select>
         </label>
@@ -66,7 +68,7 @@ final class BomController
     <section class="table-panel">
       <h2>BOM 列表</h2>
       <table>
-        <thead><tr><th>成品</th><th>版本</th><th>组件</th><th>单位用量</th><th>损耗率</th><th>状态</th></tr></thead>
+        <thead><tr><th>项目</th><th>成品</th><th>版本</th><th>组件</th><th>单位用量</th><th>损耗率</th><th>状态</th></tr></thead>
         <tbody>{$rows}</tbody>
       </table>
     </section>
@@ -111,7 +113,7 @@ HTML;
         }
 
         if (isset($_GET['error'])) {
-            return '<p class="error">BOM 保存失败，请检查成品、组件、用量和损耗率。</p>';
+            return '<p class="error">BOM 保存失败，请检查项目、成品、组件、用量和损耗率。</p>';
         }
 
         return '';
@@ -135,19 +137,21 @@ HTML;
     }
 
     /**
-     * @param array<int, array{id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}> $boms
+     * @param array<int, array{id:int,project_code:string,project_name:string,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}> $boms
      */
     private function bomRows(array $boms): string
     {
         if ($boms === []) {
-            return '<tr><td colspan="6" class="empty">暂无 BOM，请先新增一条。</td></tr>';
+            return '<tr><td colspan="7" class="empty">暂无 BOM，请先新增一条。</td></tr>';
         }
 
         $rows = [];
         foreach ($boms as $bom) {
             foreach ($bom['items'] as $item) {
                 $rows[] = sprintf(
-                    '<tr><td>%s - %s</td><td>%s</td><td>%s - %s</td><td>%s</td><td>%s%%</td><td>%s</td></tr>',
+                    '<tr><td>%s - %s</td><td>%s - %s</td><td>%s</td><td>%s - %s</td><td>%s</td><td>%s%%</td><td>%s</td></tr>',
+                    htmlspecialchars($bom['project_code'], ENT_QUOTES, 'UTF-8'),
+                    htmlspecialchars($bom['project_name'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($bom['parent_material_code'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($bom['parent_material_name'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($bom['version'], ENT_QUOTES, 'UTF-8'),

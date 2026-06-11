@@ -15,10 +15,15 @@ final class PdoBomRepository implements BomRepository
     public function list(): array
     {
         $statement = $this->pdo->query(
-            'SELECT id, parent_material_id, version, is_active
+            "SELECT id,
+                    COALESCE(project_code, 'STANDARD') AS project_code,
+                    COALESCE(project_name, '标准项目') AS project_name,
+                    parent_material_id,
+                    version,
+                    is_active
              FROM boms
              ORDER BY id DESC
-             LIMIT 100'
+             LIMIT 100"
         );
 
         $boms = array_map($this->mapBomRow(...), $statement->fetchAll());
@@ -32,10 +37,15 @@ final class PdoBomRepository implements BomRepository
     public function find(int $id): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, parent_material_id, version, is_active
+            "SELECT id,
+                    COALESCE(project_code, 'STANDARD') AS project_code,
+                    COALESCE(project_name, '标准项目') AS project_name,
+                    parent_material_id,
+                    version,
+                    is_active
              FROM boms
              WHERE id = :id
-             LIMIT 1'
+             LIMIT 1"
         );
         $statement->execute(['id' => $id]);
         $row = $statement->fetch();
@@ -54,10 +64,12 @@ final class PdoBomRepository implements BomRepository
         $this->pdo->beginTransaction();
         try {
             $statement = $this->pdo->prepare(
-                'INSERT INTO boms (parent_material_id, version, is_active, created_at)
-                 VALUES (:parent_material_id, :version, 1, CURRENT_TIMESTAMP)'
+                'INSERT INTO boms (project_code, project_name, parent_material_id, version, is_active, created_at)
+                 VALUES (:project_code, :project_name, :parent_material_id, :version, 1, CURRENT_TIMESTAMP)'
             );
             $statement->execute([
+                'project_code' => $data['project_code'],
+                'project_name' => $data['project_name'],
                 'parent_material_id' => $data['parent_material_id'],
                 'version' => $data['version'],
             ]);
@@ -87,12 +99,14 @@ final class PdoBomRepository implements BomRepository
 
     /**
      * @param array<string, mixed> $row
-     * @return array{id:int,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}
+     * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}
      */
     private function mapBomRow(array $row): array
     {
         return [
             'id' => (int) $row['id'],
+            'project_code' => (string) ($row['project_code'] ?? 'STANDARD'),
+            'project_name' => (string) ($row['project_name'] ?? '标准项目'),
             'parent_material_id' => (int) $row['parent_material_id'],
             'version' => (string) $row['version'],
             'is_active' => (int) $row['is_active'],

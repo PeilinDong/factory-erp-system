@@ -34,7 +34,7 @@ Implemented so far:
 - Protected dashboard.
 - Material master page.
 - Warehouse master page.
-- BOM management foundation.
+- Project-based BOM management foundation.
 - Purchase order foundation with purchase receipt into inventory.
 - Production work order foundation with material issue and finished-goods receipt.
 - Inventory transaction page for inbound, outbound, and adjustment records.

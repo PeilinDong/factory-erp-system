@@ -52,12 +52,16 @@ return [
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS boms (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            project_code VARCHAR(64) NOT NULL DEFAULT 'STANDARD',
+            project_name VARCHAR(190) NOT NULL DEFAULT '标准项目',
             parent_material_id BIGINT UNSIGNED NOT NULL,
             version VARCHAR(64) NOT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT fk_boms_parent_material FOREIGN KEY (parent_material_id) REFERENCES materials(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "ALTER TABLE boms ADD COLUMN IF NOT EXISTS project_code VARCHAR(64) NOT NULL DEFAULT 'STANDARD' AFTER id",
+        "ALTER TABLE boms ADD COLUMN IF NOT EXISTS project_name VARCHAR(190) NOT NULL DEFAULT '标准项目' AFTER project_code",
         "CREATE TABLE IF NOT EXISTS bom_items (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             bom_id BIGINT UNSIGNED NOT NULL,

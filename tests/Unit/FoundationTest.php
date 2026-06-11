@@ -858,6 +858,8 @@ final class FoundationTest extends TestCase
         $service = new BomService(new InMemoryBomRepository(), $materials);
 
         $bom = $service->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -870,10 +872,50 @@ final class FoundationTest extends TestCase
         ]);
         $requirements = $service->requirements($bom['id'], '4');
 
+        $this->assertSame('PRJ-A', $bom['project_code']);
+        $this->assertSame('项目A', $bom['project_name']);
         $this->assertSame('FG-001', $bom['parent_material_code']);
         $this->assertSame('MAT-001', $bom['items'][0]['component_material_code']);
         $this->assertSame('2.5', $bom['items'][0]['quantity']);
         $this->assertSame('11', $requirements[0]['required_quantity']);
+    }
+
+    public function testBomServiceRequiresProjectCodeAndName(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+
+        try {
+            $service->create([
+                'parent_material_id' => (string) $parent['id'],
+                'version' => 'v1',
+                'items' => [
+                    [
+                        'component_material_id' => (string) $component['id'],
+                        'quantity' => '1',
+                    ],
+                ],
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('project', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected BOM to require project code and name');
     }
 
     public function testBomServiceRejectsParentMaterialAsComponent(): void
@@ -890,6 +932,8 @@ final class FoundationTest extends TestCase
 
         try {
             $service->create([
+                'project_code' => 'PRJ-A',
+                'project_name' => '项目A',
                 'parent_material_id' => (string) $parent['id'],
                 'version' => 'v1',
                 'items' => [
@@ -929,6 +973,8 @@ final class FoundationTest extends TestCase
         ]);
         $service = new BomService(new InMemoryBomRepository(), $materials);
         $service->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -949,9 +995,13 @@ final class FoundationTest extends TestCase
 
         $this->assertStringContains('BOM 管理', $html);
         $this->assertStringContains('新增 BOM', $html);
+        $this->assertStringContains('项目编号', $html);
+        $this->assertStringContains('项目A', $html);
         $this->assertStringContains('FG-001', $html);
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('action="/erp/boms"', $html);
+        $this->assertStringContains('name="project_code"', $html);
+        $this->assertStringContains('name="project_name"', $html);
         $this->assertStringContains('name="component_material_id"', $html);
         $this->assertPrimaryNavigation($html);
     }
@@ -982,6 +1032,8 @@ final class FoundationTest extends TestCase
 
         $controller->store([
             'csrf_token' => $session->csrfToken(),
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'component_material_id' => (string) $component['id'],
@@ -991,6 +1043,7 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/boms?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
+        $this->assertSame('PRJ-A', $service->list()[0]['project_code']);
     }
 
     public function testPurchaseOrderServiceCreatesOrderWithAmount(): void
@@ -1318,6 +1371,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1338,6 +1393,8 @@ final class FoundationTest extends TestCase
         ]);
 
         $this->assertSame('WO-001', $order['order_no']);
+        $this->assertSame('PRJ-A', $order['project_code']);
+        $this->assertSame('项目A', $order['project_name']);
         $this->assertSame('FG-001', $order['parent_material_code']);
         $this->assertSame('10', $order['planned_quantity']);
         $this->assertSame('21', $order['requirements'][0]['required_quantity']);
@@ -1387,6 +1444,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1447,6 +1506,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1504,6 +1565,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1556,6 +1619,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1614,6 +1679,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1675,6 +1742,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1726,6 +1795,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1784,6 +1855,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1845,6 +1918,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [
@@ -1913,6 +1988,8 @@ final class FoundationTest extends TestCase
         ]);
         $bomService = new BomService(new InMemoryBomRepository(), $materials);
         $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
             'parent_material_id' => (string) $parent['id'],
             'version' => 'v1',
             'items' => [

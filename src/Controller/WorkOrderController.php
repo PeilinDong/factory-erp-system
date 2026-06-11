@@ -51,7 +51,7 @@ final class WorkOrderController
   <section class="content">
     <p class="eyebrow">生产执行</p>
     <h1>生产工单</h1>
-    <p class="muted">根据 BOM 创建生产计划，按计划数量计算组件需求，并支持领料出库和成品完工入库。</p>
+    <p class="muted">根据项目 BOM 创建生产计划，按计划数量计算组件需求，并支持领料出库和成品完工入库。</p>
     {$message}
     <section class="form-panel">
       <h2>新增工单</h2>
@@ -206,7 +206,7 @@ HTML;
     }
 
     /**
-     * @param array<int, array{id:int,parent_material_code:string,parent_material_name:string,version:string}> $boms
+     * @param array<int, array{id:int,project_code:string,project_name:string,parent_material_code:string,parent_material_name:string,version:string}> $boms
      */
     private function bomOptions(array $boms): string
     {
@@ -215,8 +215,10 @@ HTML;
         }
 
         return implode('', array_map(static fn (array $bom): string => sprintf(
-            '<option value="%s">%s - %s / %s</option>',
+            '<option value="%s">%s - %s / %s - %s / %s</option>',
             (string) (int) $bom['id'],
+            htmlspecialchars($bom['project_code'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($bom['project_name'], ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($bom['parent_material_code'], ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($bom['parent_material_name'], ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($bom['version'], ENT_QUOTES, 'UTF-8'),

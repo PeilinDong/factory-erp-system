@@ -22,7 +22,7 @@ Current implemented modules:
 
 - Material master.
 - Warehouse master.
-- BOM management foundation.
+- Project-based BOM management foundation.
 - Purchase order foundation.
 - Production work order foundation.
 - Inventory transaction entry.
@@ -82,7 +82,7 @@ Goals:
 
 Current status:
 
-- Single-level BOM creation and requirement calculation are implemented.
+- Single-level project BOM creation and requirement calculation are implemented.
 - Basic shortage analysis for planned work orders is implemented.
 - Multi-level expansion, effective-date control, and purchasing suggestion generation are not implemented yet.
 

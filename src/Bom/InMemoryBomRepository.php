@@ -7,7 +7,7 @@ namespace Erp\Bom;
 final class InMemoryBomRepository implements BomRepository
 {
     /**
-     * @var array<int, array{id:int,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}>
+     * @var array<int, array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}>
      */
     private array $boms = [];
 
@@ -39,6 +39,8 @@ final class InMemoryBomRepository implements BomRepository
 
         $bom = [
             'id' => $bomId,
+            'project_code' => $data['project_code'],
+            'project_name' => $data['project_name'],
             'parent_material_id' => $data['parent_material_id'],
             'version' => $data['version'],
             'is_active' => 1,

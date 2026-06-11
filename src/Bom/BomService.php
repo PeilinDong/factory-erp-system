@@ -15,7 +15,7 @@ final class BomService
     }
 
     /**
-     * @return array<int, array{id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}>
+     * @return array<int, array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}>
      */
     public function list(): array
     {
@@ -23,7 +23,7 @@ final class BomService
     }
 
     /**
-     * @return null|array{id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
+     * @return null|array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
      */
     public function find(int $id): ?array
     {
@@ -34,16 +34,26 @@ final class BomService
 
     /**
      * @param array<string, mixed> $data
-     * @return array{id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
+     * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
      */
     public function create(array $data): array
     {
         $parentId = (int) ($data['parent_material_id'] ?? 0);
+        $projectCode = strtoupper(trim((string) ($data['project_code'] ?? '')));
+        $projectName = trim((string) ($data['project_name'] ?? ''));
         $version = trim((string) ($data['version'] ?? ''));
         $items = $this->normalizeItems($data);
 
         if (!$this->materialExists($parentId)) {
             throw new \InvalidArgumentException('parent material must exist');
+        }
+
+        if (!preg_match('/^[A-Z0-9][A-Z0-9._-]{1,63}$/', $projectCode)) {
+            throw new \InvalidArgumentException('project code is invalid');
+        }
+
+        if ($projectName === '') {
+            throw new \InvalidArgumentException('project name must not be empty');
         }
 
         if ($version === '') {
@@ -64,6 +74,8 @@ final class BomService
         }
 
         return $this->enrich($this->boms->create([
+            'project_code' => $projectCode,
+            'project_name' => $projectName,
             'parent_material_id' => $parentId,
             'version' => $version,
             'items' => $items,
@@ -165,8 +177,8 @@ final class BomService
     }
 
     /**
-     * @param array{id:int,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>} $bom
-     * @return array{id:int,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
+     * @param array{id:int,project_code?:string,project_name?:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>} $bom
+     * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
      */
     private function enrich(array $bom): array
     {
@@ -187,6 +199,8 @@ final class BomService
 
         return [
             'id' => $bom['id'],
+            'project_code' => (string) ($bom['project_code'] ?? 'STANDARD'),
+            'project_name' => (string) ($bom['project_name'] ?? '标准项目'),
             'parent_material_id' => $bom['parent_material_id'],
             'parent_material_code' => (string) ($parent['code'] ?? $bom['parent_material_id']),
             'parent_material_name' => (string) ($parent['name'] ?? ''),
