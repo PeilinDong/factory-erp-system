@@ -43,14 +43,14 @@ The repository currently includes:
 - Sales order foundation with manual conversion to production work order drafts.
 - Inventory transaction entry for inbound, outbound, and adjustment records.
 - Stock balance page and dashboard inventory metrics.
-- BOM, purchase order, production work order, batch traceability, basic material shortage analysis, and purchasing suggestion foundations.
+- BOM, purchase order with full and partial receipt, production work order, batch traceability, basic material shortage analysis, and purchasing suggestion foundations.
 - User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; and key operation permission checks.
 - CLI operations for health checks, migrations, and administrator creation.
 - Shared-hosting deployment package builder.
 - Custom PHP test runner.
 - GitHub Actions workflow for running PHP tests on push and pull requests.
 
-The project is still early alpha. The most important missing workflows are richer purchase and work order status control, partial receipts, Excel import/export, cost reporting, operation audit logs, data-scope permissions, installer flow, and production hardening.
+The project is still early alpha. The most important missing workflows are purchase returns, richer purchase and work order status control, Excel import/export, cost reporting, operation audit logs, data-scope permissions, installer flow, and production hardening.
 
 ## How Codex Can Help
 
@@ -73,7 +73,7 @@ Good near-term tasks include:
 
 1. Operation audit logs for critical ERP actions.
 2. Excel import/export for master data and inventory balances.
-3. Purchase order status workflow with partial receipt support.
+3. Purchase return, close/cancel, and stronger purchase status workflow.
 4. Work order status workflow with return and supplement issue support.
 5. Basic work order material cost summaries.
 6. Data-scope permissions by warehouse or document type.

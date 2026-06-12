@@ -86,7 +86,13 @@ final class PurchaseOrderService
     /**
      * @return array<int, array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}>
      */
-    public function receive(int $id, int $warehouseId, string $batchNo, InventoryService $inventory): array
+    public function receive(
+        int $id,
+        int $warehouseId,
+        string $batchNo,
+        InventoryService $inventory,
+        ?string $receivedQuantity = null,
+    ): array
     {
         $order = $this->find($id);
         if ($order === null) {
@@ -101,21 +107,84 @@ final class PurchaseOrderService
             throw new \InvalidArgumentException('warehouse must exist');
         }
 
+        if ($receivedQuantity !== null && count($order['items']) !== 1) {
+            throw new \InvalidArgumentException('partial receipt currently supports single-item purchase orders');
+        }
+
         $transactions = [];
         foreach ($order['items'] as $item) {
+            $quantity = $this->receiptQuantity($order, $item, $inventory, $receivedQuantity);
             $transactions[] = $inventory->record([
                 'material_id' => (string) $item['material_id'],
                 'warehouse_id' => (string) $warehouseId,
                 'transaction_type' => 'inbound',
-                'quantity' => $item['quantity'],
+                'quantity' => $quantity,
                 'reference_no' => $order['order_no'],
                 'batch_no' => $batchNo,
             ]);
         }
 
-        $this->orders->setStatus($id, 'received');
+        $this->orders->setStatus($id, $this->receivedAll($order, $inventory) ? 'received' : 'partial');
 
         return $transactions;
+    }
+
+    /**
+     * @param array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>} $order
+     * @param array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string} $item
+     */
+    private function receiptQuantity(array $order, array $item, InventoryService $inventory, ?string $receivedQuantity): string
+    {
+        $remaining = (float) $item['quantity'] - $this->receivedQuantityFor($order['order_no'], $item['material_id'], $inventory);
+        if ($remaining <= 0.0) {
+            throw new \InvalidArgumentException('purchase order is already received');
+        }
+
+        $rawQuantity = $receivedQuantity === null || trim($receivedQuantity) === ''
+            ? (string) $remaining
+            : trim($receivedQuantity);
+
+        if (!preg_match('/^\d+(\.\d{1,6})?$/', $rawQuantity) || (float) $rawQuantity <= 0.0) {
+            throw new \InvalidArgumentException('received quantity must be greater than zero');
+        }
+
+        if (((float) $rawQuantity - $remaining) > 0.000001) {
+            throw new \InvalidArgumentException('received quantity exceeds remaining quantity');
+        }
+
+        return $this->normalizeNumber($rawQuantity);
+    }
+
+    /**
+     * @param array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>} $order
+     */
+    private function receivedAll(array $order, InventoryService $inventory): bool
+    {
+        foreach ($order['items'] as $item) {
+            $received = $this->receivedQuantityFor($order['order_no'], $item['material_id'], $inventory);
+            if (((float) $item['quantity'] - $received) > 0.000001) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function receivedQuantityFor(string $orderNo, int $materialId, InventoryService $inventory): float
+    {
+        $received = 0.0;
+        foreach ($inventory->list() as $transaction) {
+            if ($transaction['reference_no'] !== $orderNo
+                || $transaction['material_id'] !== $materialId
+                || $transaction['transaction_type'] !== 'inbound'
+            ) {
+                continue;
+            }
+
+            $received += (float) $transaction['quantity'];
+        }
+
+        return $received;
     }
 
     /**

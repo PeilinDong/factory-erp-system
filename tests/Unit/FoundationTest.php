@@ -1626,6 +1626,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('action="/erp/purchases/receive"', $html);
         $this->assertStringContains('name="unit_price"', $html);
         $this->assertStringContains('name="batch_no"', $html);
+        $this->assertStringContains('name="received_quantity"', $html);
         $this->assertPrimaryNavigation($html);
     }
 
@@ -1742,6 +1743,79 @@ final class FoundationTest extends TestCase
         $this->assertSame('received', $service->list()[0]['status']);
     }
 
+    public function testPurchaseOrderServiceAllowsPartialReceipts(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-003A',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $first = $service->receive($order['id'], $warehouse['id'], 'LOT-PO-003A-1', $inventory, '4');
+        $second = $service->receive($order['id'], $warehouse['id'], 'LOT-PO-003A-2', $inventory, '6');
+
+        $this->assertSame('4', $first[0]['quantity']);
+        $this->assertSame('6', $second[0]['quantity']);
+        $this->assertSame('10', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('received', $service->list()[0]['status']);
+    }
+
+    public function testPurchaseOrderServiceRejectsReceiptBeyondOrderedQuantity(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-003B',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $service->receive($order['id'], $warehouse['id'], 'LOT-PO-003B-1', $inventory, '6');
+
+        try {
+            $service->receive($order['id'], $warehouse['id'], 'LOT-PO-003B-2', $inventory, '5');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('remaining quantity', $exception->getMessage());
+            $this->assertSame('6', $inventory->stockBalance($material['id'], $warehouse['id']));
+            $this->assertSame('partial', $service->list()[0]['status']);
+            return;
+        }
+
+        throw new \RuntimeException('Expected purchase receipt beyond remaining quantity to be rejected');
+    }
+
     public function testPurchaseOrderServiceRejectsDuplicateReceive(): void
     {
         $materials = new InMemoryMaterialRepository();
@@ -1823,11 +1897,12 @@ final class FoundationTest extends TestCase
             'id' => (string) $order['id'],
             'warehouse_id' => (string) $warehouse['id'],
             'batch_no' => 'LOT-PO-004',
+            'received_quantity' => '3',
         ]);
 
         $this->assertSame('/erp/purchases?received=1', $redirector->lastLocation());
-        $this->assertSame('6', $inventory->stockBalance($material['id'], $warehouse['id']));
-        $this->assertSame('received', $service->list()[0]['status']);
+        $this->assertSame('3', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('partial', $service->list()[0]['status']);
     }
 
     public function testWorkOrderServiceCreatesOrderFromBomWithRequirements(): void

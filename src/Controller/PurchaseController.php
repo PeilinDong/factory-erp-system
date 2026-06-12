@@ -54,7 +54,7 @@ final class PurchaseController
   <section class="content">
     <p class="eyebrow">采购管理</p>
     <h1>采购订单</h1>
-    <p class="muted">记录供应商、采购物料、数量和单价；收货后可直接生成库存入库流水和批次追溯数据。</p>
+    <p class="muted">记录供应商、采购物料、数量、单价和预计到货日。收货时可按本次数量分批入库。</p>
     {$message}
     <section class="form-panel">
       <h2>新增采购单</h2>
@@ -145,6 +145,7 @@ HTML;
                 (int) ($input['warehouse_id'] ?? 0),
                 (string) ($input['batch_no'] ?? ''),
                 $this->inventory,
+                (string) ($input['received_quantity'] ?? ''),
             );
             $this->redirector()->redirect(App::url('/purchases?received=1'));
         } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
@@ -165,7 +166,7 @@ HTML;
         }
 
         if (isset($_GET['error'])) {
-            return '<p class="error">采购单处理失败，请检查供应商、单号、物料、数量、单价、仓库和批次号。</p>';
+            return '<p class="error">采购单处理失败，请检查供应商、单号、物料、数量、单价、仓库、批次号和本次收货数量。</p>';
         }
 
         return '';
@@ -280,6 +281,7 @@ HTML;
   <input type="hidden" name="csrf_token" value="{$csrf}">
   <input type="hidden" name="id" value="{$id}">
   <select name="warehouse_id" required>{$warehouseOptions}</select>
+  <input name="received_quantity" required placeholder="本次数量">
   <input name="batch_no" required value="{$batch}" placeholder="LOT-PO-001">
   <button type="submit">收货入库</button>
 </form>
@@ -290,6 +292,7 @@ HTML;
     {
         return [
             'draft' => '草稿',
+            'partial' => '部分收货',
             'received' => '已收货',
         ][$status] ?? htmlspecialchars($status, ENT_QUOTES, 'UTF-8');
     }

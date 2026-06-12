@@ -108,10 +108,10 @@ Goals:
 
 Current status:
 
-- Purchase order creation and full receipt into inventory are implemented.
+- Purchase order creation plus full and partial receipt into inventory are implemented.
 - Purchasing suggestions can be converted into purchase order drafts.
 - Work order creation, full material issue, and full finished-goods receipt are implemented.
-- Partial receipt, purchase return, work order return, supplement issue, and richer status control are not implemented yet.
+- Purchase return, work order return, supplement issue, and richer status control are not implemented yet.
 
 Why this phase matters:
 

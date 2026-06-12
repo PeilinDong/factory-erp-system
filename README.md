@@ -38,7 +38,7 @@ Implemented so far:
 - Supplier master page.
 - Sales order foundation with manual conversion to production work order drafts.
 - Project-based BOM management foundation.
-- Purchase order foundation with purchase receipt into inventory.
+- Purchase order foundation with full and partial purchase receipt into inventory.
 - Production work order foundation with material issue and finished-goods receipt.
 - Inventory transaction page for inbound, outbound, and adjustment records.
 - Stock balance page by material and warehouse.
@@ -59,7 +59,7 @@ Not implemented yet:
 - Excel import/export for master data.
 - Multi-level BOM expansion, BOM approval, and effective-date control.
 - Sales delivery tracking and stronger sales order status control.
-- Partial purchase receipt and purchase return.
+- Purchase return and stronger purchase status workflow.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
 - Data-scope permission controls and operation audit logs.
@@ -159,7 +159,7 @@ Near-term priorities:
 
 1. Strengthen work order and purchase order status control.
 2. Excel import/export for material, warehouse, and BOM data.
-3. Add partial purchase receipt and purchase status workflow.
+3. Add purchase return and stronger purchase status workflow.
 4. Add cost visibility for work order material usage.
 5. Add data-scope permissions and operation audit logs.
 

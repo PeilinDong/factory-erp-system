@@ -68,17 +68,17 @@ Acceptance criteria:
 - Prevent duplicate or invalid transitions.
 - Add tests for the main transition paths.
 
-## 7. Add Partial Purchase Receipt
+## 7. Add Purchase Return Workflow
 
-Allow a purchase order to be received in multiple batches instead of one full receipt.
+Allow received purchase materials to be returned to suppliers with traceable inventory movement.
 
 Acceptance criteria:
 
-- Add receipt quantity input.
-- Track received quantity per order item.
-- Set status to partially_received until all quantity is received.
-- Preserve batch number for each receipt.
-- Add tests for partial and final receipt.
+- Add purchase return action for received or partially received purchase orders.
+- Record outbound inventory transactions linked to the purchase order.
+- Prevent returning more than the received quantity.
+- Preserve batch number and reference number for traceability.
+- Add tests for valid returns and invalid over-returns.
 
 ## 8. Add Work Order Return And Supplement Issue
 
