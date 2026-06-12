@@ -34,9 +34,12 @@ final class BomController
 
         $csrf = htmlspecialchars($session->csrfToken(), ENT_QUOTES, 'UTF-8');
         $action = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
+        $searchAction = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
         $message = $this->message();
+        $query = trim((string) ($_GET['q'] ?? ''));
+        $queryValue = htmlspecialchars($query, ENT_QUOTES, 'UTF-8');
         $materialOptions = $this->materialOptions($this->materials->list());
-        $rows = $this->bomRows($this->boms->list());
+        $rows = $this->bomRows($this->boms->search($query), $session->csrfToken());
         $sidebar = Sidebar::render();
 
         $body = <<<HTML
@@ -47,6 +50,12 @@ final class BomController
     <h1>BOM 管理</h1>
     <p class="muted">按项目维护成品与组件用量关系。当前早期版本先支持一条组件明细，后续会扩展多行组件、版本生效和工单齐套分析。</p>
     {$message}
+    <section class="filter-panel">
+      <form class="search-form" method="get" action="{$searchAction}">
+        <label>搜索 BOM <input name="q" value="{$queryValue}" placeholder="项目编号、项目名称、版本"></label>
+        <button type="submit">搜索</button>
+      </form>
+    </section>
     <section class="form-panel">
       <h2>新增 BOM</h2>
       <form class="material-form" method="post" action="{$action}">
@@ -68,7 +77,7 @@ final class BomController
     <section class="table-panel">
       <h2>BOM 列表</h2>
       <table>
-        <thead><tr><th>项目</th><th>成品</th><th>版本</th><th>组件</th><th>单位用量</th><th>损耗率</th><th>状态</th></tr></thead>
+        <thead><tr><th>项目</th><th>成品</th><th>版本</th><th>组件</th><th>单位用量</th><th>损耗率</th><th>状态</th><th>操作</th></tr></thead>
         <tbody>{$rows}</tbody>
       </table>
     </section>
@@ -106,10 +115,41 @@ HTML;
         return '';
     }
 
+    /**
+     * @param null|array<string, string> $input
+     */
+    public function status(?array $input = null): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        $input ??= $_POST;
+        if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
+            $this->redirector()->redirect(App::url('/boms?error=csrf'));
+            return '';
+        }
+
+        try {
+            $this->boms->setActive((int) ($input['id'] ?? 0), (string) ($input['is_active'] ?? '0') === '1');
+            $this->redirector()->redirect(App::url('/boms?status=1'));
+        } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
+            $this->redirector()->redirect(App::url('/boms?error=validation'));
+        }
+
+        return '';
+    }
+
     private function message(): string
     {
         if (isset($_GET['created'])) {
             return '<p class="success">BOM 已保存。</p>';
+        }
+
+        if (isset($_GET['status'])) {
+            return '<p class="success">BOM 状态已更新。</p>';
         }
 
         if (isset($_GET['error'])) {
@@ -139,17 +179,31 @@ HTML;
     /**
      * @param array<int, array{id:int,project_code:string,project_name:string,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}> $boms
      */
-    private function bomRows(array $boms): string
+    private function bomRows(array $boms, string $csrfToken): string
     {
         if ($boms === []) {
-            return '<tr><td colspan="7" class="empty">暂无 BOM，请先新增一条。</td></tr>';
+            return '<tr><td colspan="8" class="empty">暂无 BOM，请先新增一条。</td></tr>';
         }
 
         $rows = [];
+        $statusAction = htmlspecialchars(App::url('/boms/status'), ENT_QUOTES, 'UTF-8');
+        $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
         foreach ($boms as $bom) {
             foreach ($bom['items'] as $item) {
+                $isActive = $bom['is_active'] === 1;
+                $nextStatus = $isActive ? '0' : '1';
+                $statusLabel = $isActive ? '停用' : '启用';
+                $bomId = (string) (int) $bom['id'];
+                $actions = <<<HTML
+<form method="post" action="{$statusAction}" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{$csrf}">
+  <input type="hidden" name="id" value="{$bomId}">
+  <input type="hidden" name="is_active" value="{$nextStatus}">
+  <button type="submit">{$statusLabel}</button>
+</form>
+HTML;
                 $rows[] = sprintf(
-                    '<tr><td>%s - %s</td><td>%s - %s</td><td>%s</td><td>%s - %s</td><td>%s</td><td>%s%%</td><td>%s</td></tr>',
+                    '<tr><td>%s - %s</td><td>%s - %s</td><td>%s</td><td>%s - %s</td><td>%s</td><td>%s%%</td><td>%s</td><td>%s</td></tr>',
                     htmlspecialchars($bom['project_code'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($bom['project_name'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($bom['parent_material_code'], ENT_QUOTES, 'UTF-8'),
@@ -160,6 +214,7 @@ HTML;
                     htmlspecialchars($item['quantity'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($item['scrap_rate'], ENT_QUOTES, 'UTF-8'),
                     $bom['is_active'] === 1 ? '启用' : '停用',
+                    $actions,
                 );
             }
         }

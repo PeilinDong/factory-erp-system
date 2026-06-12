@@ -31,7 +31,7 @@ Current tests verify:
 15. Warehouse master creation, validation, and protected page rendering.
 16. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
 17. Stock balance page rendering and dashboard inventory metrics.
-18. Project BOM, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
+18. Project BOM creation, search, enable/disable actions, inactive-BOM protection for new work orders, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
 19. Batch traceability and shared primary navigation coverage.
 20. Basic material shortage analysis for planned work orders.
 21. User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; six-character development password coverage for admin creation; and key operation permission checks.

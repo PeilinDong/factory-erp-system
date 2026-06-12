@@ -56,8 +56,13 @@ final class WorkOrderService
             throw new \InvalidArgumentException('due date must use YYYY-MM-DD');
         }
 
-        if ($this->boms->find($bomId) === null) {
+        $bom = $this->boms->find($bomId);
+        if ($bom === null) {
             throw new \InvalidArgumentException('bom must exist');
+        }
+
+        if ((int) $bom['is_active'] !== 1) {
+            throw new \InvalidArgumentException('bom must be active');
         }
 
         return $this->enrich($this->orders->create([

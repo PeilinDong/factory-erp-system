@@ -18,6 +18,20 @@ final class InMemoryBomRepository implements BomRepository
         return array_values($this->boms);
     }
 
+    public function search(string $query): array
+    {
+        $query = strtolower(trim($query));
+        if ($query === '') {
+            return $this->list();
+        }
+
+        return array_values(array_filter($this->boms, static function (array $bom) use ($query): bool {
+            return str_contains(strtolower($bom['project_code']), $query)
+                || str_contains(strtolower($bom['project_name']), $query)
+                || str_contains(strtolower($bom['version']), $query);
+        }));
+    }
+
     public function find(int $id): ?array
     {
         return $this->boms[$id] ?? null;
@@ -49,5 +63,16 @@ final class InMemoryBomRepository implements BomRepository
         $this->boms[$bomId] = $bom;
 
         return $bom;
+    }
+
+    public function setActive(int $id, bool $active): array
+    {
+        if (!isset($this->boms[$id])) {
+            throw new \RuntimeException('bom not found');
+        }
+
+        $this->boms[$id]['is_active'] = $active ? 1 : 0;
+
+        return $this->boms[$id];
     }
 }

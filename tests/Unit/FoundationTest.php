@@ -918,6 +918,57 @@ final class FoundationTest extends TestCase
         throw new \RuntimeException('Expected BOM to require project code and name');
     }
 
+    public function testBomServiceSearchesProjectBomsAndTogglesStatus(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+        $service->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '1',
+                ],
+            ],
+        ]);
+        $target = $service->create([
+            'project_code' => 'PRJ-B',
+            'project_name' => '客户B项目',
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v2',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+
+        $matches = $service->search('客户B');
+        $disabled = $service->setActive($target['id'], false);
+
+        $this->assertSame(1, count($matches));
+        $this->assertSame('PRJ-B', $matches[0]['project_code']);
+        $this->assertSame(0, $disabled['is_active']);
+    }
+
     public function testBomServiceRejectsParentMaterialAsComponent(): void
     {
         $materials = new InMemoryMaterialRepository();
@@ -997,9 +1048,11 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('新增 BOM', $html);
         $this->assertStringContains('项目编号', $html);
         $this->assertStringContains('项目A', $html);
+        $this->assertStringContains('搜索 BOM', $html);
         $this->assertStringContains('FG-001', $html);
         $this->assertStringContains('MAT-001', $html);
         $this->assertStringContains('action="/erp/boms"', $html);
+        $this->assertStringContains('action="/erp/boms/status"', $html);
         $this->assertStringContains('name="project_code"', $html);
         $this->assertStringContains('name="project_name"', $html);
         $this->assertStringContains('name="component_material_id"', $html);
@@ -1044,6 +1097,52 @@ final class FoundationTest extends TestCase
         $this->assertSame('/erp/boms?created=1', $redirector->lastLocation());
         $this->assertSame(1, count($service->list()));
         $this->assertSame('PRJ-A', $service->list()[0]['project_code']);
+    }
+
+    public function testBomControllerTogglesBomStatusAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $service->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '3',
+                ],
+            ],
+        ]);
+        $redirector = new InMemoryRedirector();
+        $controller = new BomController($service, new MaterialService($materials), $session, $redirector);
+
+        $controller->status([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $bom['id'],
+            'is_active' => '0',
+        ]);
+
+        $this->assertSame('/erp/boms?status=1', $redirector->lastLocation());
+        $this->assertSame(0, $service->list()[0]['is_active']);
     }
 
     public function testPurchaseOrderServiceCreatesOrderWithAmount(): void
@@ -1420,6 +1519,53 @@ final class FoundationTest extends TestCase
         }
 
         throw new \RuntimeException('Expected invalid work order quantity to be rejected');
+    }
+
+    public function testWorkOrderServiceRejectsInactiveBom(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $bomService->setActive($bom['id'], false);
+        $service = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+
+        try {
+            $service->create([
+                'order_no' => 'WO-001',
+                'bom_id' => (string) $bom['id'],
+                'planned_quantity' => '10',
+            ]);
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('active', $exception->getMessage());
+            return;
+        }
+
+        throw new \RuntimeException('Expected inactive BOM to be rejected');
     }
 
     public function testWorkOrderPageShowsListAndCreateFormForLoggedInUser(): void

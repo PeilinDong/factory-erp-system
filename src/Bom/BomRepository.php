@@ -12,6 +12,11 @@ interface BomRepository
     public function list(): array;
 
     /**
+     * @return array<int, array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}>
+     */
+    public function search(string $query): array;
+
+    /**
      * @return null|array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}
      */
     public function find(int $id): ?array;
@@ -21,4 +26,9 @@ interface BomRepository
      * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}
      */
     public function create(array $data): array;
+
+    /**
+     * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,quantity:string,scrap_rate:string}>}
+     */
+    public function setActive(int $id, bool $active): array;
 }

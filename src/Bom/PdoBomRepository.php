@@ -34,6 +34,35 @@ final class PdoBomRepository implements BomRepository
         return $boms;
     }
 
+    public function search(string $query): array
+    {
+        $query = trim($query);
+        if ($query === '') {
+            return $this->list();
+        }
+
+        $statement = $this->pdo->prepare(
+            "SELECT id,
+                    COALESCE(project_code, 'STANDARD') AS project_code,
+                    COALESCE(project_name, '标准项目') AS project_name,
+                    parent_material_id,
+                    version,
+                    is_active
+             FROM boms
+             WHERE project_code LIKE :query OR project_name LIKE :query OR version LIKE :query
+             ORDER BY id DESC
+             LIMIT 100"
+        );
+        $statement->execute(['query' => '%' . $query . '%']);
+
+        $boms = array_map($this->mapBomRow(...), $statement->fetchAll());
+        foreach ($boms as $index => $bom) {
+            $boms[$index]['items'] = $this->itemsFor((int) $bom['id']);
+        }
+
+        return $boms;
+    }
+
     public function find(int $id): ?array
     {
         $statement = $this->pdo->prepare(
@@ -95,6 +124,17 @@ final class PdoBomRepository implements BomRepository
         }
 
         return $this->find($bomId) ?? throw new \RuntimeException('bom not found');
+    }
+
+    public function setActive(int $id, bool $active): array
+    {
+        $statement = $this->pdo->prepare('UPDATE boms SET is_active = :is_active WHERE id = :id');
+        $statement->execute([
+            'id' => $id,
+            'is_active' => $active ? 1 : 0,
+        ]);
+
+        return $this->find($id) ?? throw new \RuntimeException('bom not found');
     }
 
     /**

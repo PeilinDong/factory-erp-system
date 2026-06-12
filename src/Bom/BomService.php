@@ -23,6 +23,14 @@ final class BomService
     }
 
     /**
+     * @return array<int, array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}>
+     */
+    public function search(string $query): array
+    {
+        return array_map($this->enrich(...), $this->boms->search(trim($query)));
+    }
+
+    /**
      * @return null|array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
      */
     public function find(int $id): ?array
@@ -80,6 +88,18 @@ final class BomService
             'version' => $version,
             'items' => $items,
         ]));
+    }
+
+    /**
+     * @return array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
+     */
+    public function setActive(int $id, bool $active): array
+    {
+        if ($id <= 0) {
+            throw new \InvalidArgumentException('bom must exist');
+        }
+
+        return $this->enrich($this->boms->setActive($id, $active));
     }
 
     /**

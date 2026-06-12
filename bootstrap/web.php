@@ -133,6 +133,7 @@ $router->post('/warehouses/update', [$warehouses, 'update']);
 $router->post('/warehouses/status', [$warehouses, 'status']);
 $router->get('/boms', [$boms, 'index']);
 $router->post('/boms', [$boms, 'store']);
+$router->post('/boms/status', [$boms, 'status']);
 $router->get('/purchases', [$purchases, 'index']);
 $router->post('/purchases', [$purchases, 'store']);
 $router->post('/purchases/receive', [$purchases, 'receive']);
