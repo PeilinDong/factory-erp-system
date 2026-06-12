@@ -31,7 +31,7 @@ Current tests verify:
 15. Warehouse master creation, validation, and protected page rendering.
 16. Supplier master creation, search, enable/disable actions, and purchase order supplier selection.
 17. Customer master creation, search, enable/disable actions, and sales order customer selection.
-18. Sales order foundation with customer, finished-goods material, quantity, due date, and draft status.
+18. Sales order foundation with customer, finished-goods material, quantity, due date, draft status, and conversion to production work order drafts.
 19. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
 20. Stock balance page rendering and dashboard inventory metrics.
 21. Project BOM creation, search, enable/disable actions, inactive-BOM protection for new work orders, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.

@@ -56,6 +56,17 @@ final class PdoSalesOrderRepository implements SalesOrderRepository
         return $this->find((int) $this->pdo->lastInsertId()) ?? throw new \RuntimeException('sales order not found');
     }
 
+    public function setStatus(int $id, string $status): array
+    {
+        $statement = $this->pdo->prepare('UPDATE sales_orders SET status = :status WHERE id = :id');
+        $statement->execute([
+            'id' => $id,
+            'status' => $status,
+        ]);
+
+        return $this->find($id) ?? throw new \RuntimeException('sales order not found');
+    }
+
     /**
      * @param array<string, mixed> $row
      * @return array{id:int,order_no:string,customer_id:int,product_material_id:int,quantity:string,due_date:string,status:string}

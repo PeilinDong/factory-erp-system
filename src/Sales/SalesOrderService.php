@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Erp\Sales;
 
+use Erp\Bom\BomService;
 use Erp\Customer\CustomerRepository;
 use Erp\Material\MaterialRepository;
+use Erp\WorkOrder\WorkOrderService;
 
 final class SalesOrderService
 {
@@ -76,6 +78,51 @@ final class SalesOrderService
             'due_date' => $dueDate,
             'status' => 'draft',
         ]));
+    }
+
+    /**
+     * @return array{id:int,order_no:string,bom_id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_code:string,component_material_name:string,required_quantity:string}>}
+     */
+    public function planProduction(int $id, BomService $boms, WorkOrderService $workOrders): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('sales order must exist');
+        }
+
+        if ($order['status'] !== 'draft') {
+            throw new \InvalidArgumentException('sales order is already planned');
+        }
+
+        $bom = $this->activeBomForProduct($order['product_material_id'], $boms);
+        if ($bom === null) {
+            throw new \InvalidArgumentException('active bom must exist for sales product');
+        }
+
+        $workOrder = $workOrders->create([
+            'order_no' => 'WO-' . $order['order_no'],
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => $order['quantity'],
+            'due_date' => $order['due_date'],
+        ]);
+        $this->orders->setStatus($id, 'planned');
+
+        return $workOrder;
+    }
+
+    /**
+     * @return null|array{id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,version:string,is_active:int,items:array<int, array{id:int,bom_id:int,component_material_id:int,component_material_code:string,component_material_name:string,quantity:string,scrap_rate:string}>}
+     */
+    private function activeBomForProduct(int $productMaterialId, BomService $boms): ?array
+    {
+        $matches = array_values(array_filter(
+            $boms->list(),
+            static fn (array $bom): bool => (int) $bom['parent_material_id'] === $productMaterialId
+                && (int) $bom['is_active'] === 1,
+        ));
+        usort($matches, static fn (array $left, array $right): int => (int) $right['id'] <=> (int) $left['id']);
+
+        return $matches[0] ?? null;
     }
 
     /**

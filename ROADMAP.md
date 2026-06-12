@@ -24,7 +24,7 @@ Current implemented modules:
 - Warehouse master.
 - Customer master.
 - Supplier master.
-- Sales order foundation.
+- Sales order foundation with manual conversion to production work order drafts.
 - Project-based BOM management foundation.
 - Purchase order foundation.
 - Production work order foundation.
@@ -100,6 +100,7 @@ Goals:
 
 - Purchasing request or suggestion workflow.
 - Purchase order foundation.
+- Manual sales order conversion to production work order drafts.
 - Work order creation.
 - Work order material issue and return.
 - Finished-goods receipt.

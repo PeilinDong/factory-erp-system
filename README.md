@@ -36,7 +36,7 @@ Implemented so far:
 - Warehouse master page.
 - Customer master page.
 - Supplier master page.
-- Sales order foundation.
+- Sales order foundation with manual conversion to production work order drafts.
 - Project-based BOM management foundation.
 - Purchase order foundation with purchase receipt into inventory.
 - Production work order foundation with material issue and finished-goods receipt.
@@ -58,7 +58,7 @@ Not implemented yet:
 
 - Excel import/export for master data.
 - Multi-level BOM expansion, BOM approval, and effective-date control.
-- Sales order to production-demand conversion.
+- Sales delivery tracking and stronger sales order status control.
 - Partial purchase receipt and purchase return.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.

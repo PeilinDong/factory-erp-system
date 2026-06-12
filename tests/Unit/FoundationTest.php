@@ -1007,6 +1007,65 @@ final class FoundationTest extends TestCase
         $this->assertSame('draft', $order['status']);
     }
 
+    public function testSalesOrderServicePlansProductionFromActiveBom(): void
+    {
+        $customers = new InMemoryCustomerRepository();
+        $customer = $customers->create([
+            'code' => 'CUS-001',
+            'name' => 'Customer A',
+            'contact_name' => '',
+            'phone' => '',
+        ]);
+        $materials = new InMemoryMaterialRepository();
+        $product = $materials->create([
+            'code' => 'FG-001',
+            'name' => 'Product A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $boms = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $boms->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => 'Project A',
+            'parent_material_id' => (string) $product['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                    'scrap_rate' => '0',
+                ],
+            ],
+        ]);
+        $service = new SalesOrderService(new InMemorySalesOrderRepository(), $customers, $materials);
+        $order = $service->create([
+            'order_no' => 'SO-001',
+            'customer_id' => (string) $customer['id'],
+            'product_material_id' => (string) $product['id'],
+            'quantity' => '20',
+            'due_date' => '2026-08-31',
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $boms);
+
+        $workOrder = $service->planProduction($order['id'], $boms, $workOrders);
+
+        $this->assertSame('WO-SO-001', $workOrder['order_no']);
+        $this->assertSame($bom['id'], $workOrder['bom_id']);
+        $this->assertSame('20', $workOrder['planned_quantity']);
+        $this->assertSame('2026-08-31', $workOrder['due_date']);
+        $this->assertSame('planned', $workOrder['status']);
+        $this->assertSame('40', $workOrder['requirements'][0]['required_quantity']);
+        $this->assertSame('planned', $service->find($order['id'])['status']);
+    }
+
     public function testSalesOrderPageShowsListAndCreateForm(): void
     {
         App::setBasePath('/erp');
@@ -1051,7 +1110,79 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('上海客户', $html);
         $this->assertStringContains('FG-001', $html);
         $this->assertStringContains('action="/erp/sales-orders"', $html);
+        $this->assertStringContains('action="/erp/sales-orders/plan"', $html);
         $this->assertPrimaryNavigation($html);
+    }
+
+    public function testSalesOrderControllerPlansProductionAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $redirector = new InMemoryRedirector();
+        $customers = new InMemoryCustomerRepository();
+        $customer = $customers->create([
+            'code' => 'CUS-001',
+            'name' => 'Customer A',
+            'contact_name' => '',
+            'phone' => '',
+        ]);
+        $materials = new InMemoryMaterialRepository();
+        $product = $materials->create([
+            'code' => 'FG-001',
+            'name' => 'Product A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $boms = new BomService(new InMemoryBomRepository(), $materials);
+        $boms->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => 'Project A',
+            'parent_material_id' => (string) $product['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                    'scrap_rate' => '0',
+                ],
+            ],
+        ]);
+        $service = new SalesOrderService(new InMemorySalesOrderRepository(), $customers, $materials);
+        $order = $service->create([
+            'order_no' => 'SO-001',
+            'customer_id' => (string) $customer['id'],
+            'product_material_id' => (string) $product['id'],
+            'quantity' => '20',
+            'due_date' => '2026-08-31',
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $boms);
+        $controller = new SalesOrderController(
+            $service,
+            new CustomerService($customers),
+            new MaterialService($materials),
+            $session,
+            $redirector,
+            $boms,
+            $workOrders,
+        );
+
+        $controller->plan([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $order['id'],
+        ]);
+
+        $this->assertSame('/erp/sales-orders?planned=1', $redirector->lastLocation());
+        $this->assertSame('planned', $service->find($order['id'])['status']);
+        $this->assertSame('WO-SO-001', $workOrders->list()[0]['order_no']);
     }
 
     public function testBomServiceCreatesBomWithComponentsAndCalculatesRequirements(): void

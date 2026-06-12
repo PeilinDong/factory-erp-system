@@ -21,4 +21,9 @@ interface SalesOrderRepository
      * @return array{id:int,order_no:string,customer_id:int,product_material_id:int,quantity:string,due_date:string,status:string}
      */
     public function create(array $data): array;
+
+    /**
+     * @return array{id:int,order_no:string,customer_id:int,product_material_id:int,quantity:string,due_date:string,status:string}
+     */
+    public function setStatus(int $id, string $status): array;
 }

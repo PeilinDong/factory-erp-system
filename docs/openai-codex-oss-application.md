@@ -40,7 +40,7 @@ The repository currently includes:
 - Warehouse master.
 - Customer master.
 - Supplier master.
-- Sales order foundation.
+- Sales order foundation with manual conversion to production work order drafts.
 - Inventory transaction entry for inbound, outbound, and adjustment records.
 - Stock balance page and dashboard inventory metrics.
 - BOM, purchase order, production work order, batch traceability, basic material shortage analysis, and purchasing suggestion foundations.

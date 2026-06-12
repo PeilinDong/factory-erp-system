@@ -37,4 +37,17 @@ final class InMemorySalesOrderRepository implements SalesOrderRepository
 
         return $order;
     }
+
+    public function setStatus(int $id, string $status): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \RuntimeException('sales order not found');
+        }
+
+        $order['status'] = $status;
+        $this->orders[$id] = $order;
+
+        return $order;
+    }
 }
