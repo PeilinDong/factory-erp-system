@@ -30,12 +30,14 @@ Current tests verify:
 14. Material master creation, validation, and protected page rendering.
 15. Warehouse master creation, validation, and protected page rendering.
 16. Supplier master creation, search, enable/disable actions, and purchase order supplier selection.
-17. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
-18. Stock balance page rendering and dashboard inventory metrics.
-19. Project BOM creation, search, enable/disable actions, inactive-BOM protection for new work orders, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
-20. Batch traceability and shared primary navigation coverage.
-21. Basic material shortage analysis for planned work orders, purchasing suggestion generation, and conversion to purchase order drafts.
-22. User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; six-character development password coverage for admin creation; and key operation permission checks.
+17. Customer master creation, search, enable/disable actions, and sales order customer selection.
+18. Sales order foundation with customer, finished-goods material, quantity, due date, and draft status.
+19. Inventory transactions, quantity validation, protected page rendering, and stock balance calculation.
+20. Stock balance page rendering and dashboard inventory metrics.
+21. Project BOM creation, search, enable/disable actions, inactive-BOM protection for new work orders, purchase order, production work order, material issue, purchase receipt, finished-goods receipt, and duplicate operation protection.
+22. Batch traceability and shared primary navigation coverage.
+23. Basic material shortage analysis for planned work orders, purchasing suggestion generation, and conversion to purchase order drafts.
+24. User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; six-character development password coverage for admin creation; and key operation permission checks.
 
 ## Verification Commands
 

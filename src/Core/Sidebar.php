@@ -11,8 +11,10 @@ final class Sidebar
         $home = htmlspecialchars(App::url('/'), ENT_QUOTES, 'UTF-8');
         $materials = htmlspecialchars(App::url('/materials'), ENT_QUOTES, 'UTF-8');
         $warehouses = htmlspecialchars(App::url('/warehouses'), ENT_QUOTES, 'UTF-8');
+        $customers = htmlspecialchars(App::url('/customers'), ENT_QUOTES, 'UTF-8');
         $suppliers = htmlspecialchars(App::url('/suppliers'), ENT_QUOTES, 'UTF-8');
         $boms = htmlspecialchars(App::url('/boms'), ENT_QUOTES, 'UTF-8');
+        $salesOrders = htmlspecialchars(App::url('/sales-orders'), ENT_QUOTES, 'UTF-8');
         $purchases = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
         $workOrders = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
         $shortages = htmlspecialchars(App::url('/planning/shortages'), ENT_QUOTES, 'UTF-8');
@@ -42,8 +44,10 @@ HTML;
     <a href="{$home}">仪表盘</a>
     <a href="{$materials}">物料档案</a>
     <a href="{$warehouses}">仓库档案</a>
+    <a href="{$customers}">客户档案</a>
     <a href="{$suppliers}">供应商档案</a>
     <a href="{$boms}">BOM 管理</a>
+    <a href="{$salesOrders}">销售订单</a>
     <a href="{$purchases}">采购订单</a>
     <a href="{$workOrders}">生产工单</a>
     <a href="{$shortages}">缺料分析</a>

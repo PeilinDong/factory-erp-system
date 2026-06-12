@@ -8,11 +8,13 @@ return [
         'users',
         'materials',
         'warehouses',
+        'customers',
         'suppliers',
         'boms',
         'bom_items',
         'purchase_orders',
         'purchase_order_items',
+        'sales_orders',
         'work_orders',
         'inventory_transactions',
     ],
@@ -48,6 +50,15 @@ return [
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             code VARCHAR(64) NOT NULL UNIQUE,
             name VARCHAR(190) NOT NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS customers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            code VARCHAR(64) NOT NULL UNIQUE,
+            name VARCHAR(190) NOT NULL,
+            contact_name VARCHAR(120) NULL,
+            phone VARCHAR(64) NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
@@ -99,6 +110,18 @@ return [
             unit_price DECIMAL(18, 6) NOT NULL,
             CONSTRAINT fk_purchase_order_items_order FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id),
             CONSTRAINT fk_purchase_order_items_material FOREIGN KEY (material_id) REFERENCES materials(id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS sales_orders (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            order_no VARCHAR(64) NOT NULL UNIQUE,
+            customer_id BIGINT UNSIGNED NOT NULL,
+            product_material_id BIGINT UNSIGNED NOT NULL,
+            quantity DECIMAL(18, 6) NOT NULL,
+            due_date DATE NULL,
+            status VARCHAR(32) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_sales_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(id),
+            CONSTRAINT fk_sales_orders_product_material FOREIGN KEY (product_material_id) REFERENCES materials(id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS work_orders (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

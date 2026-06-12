@@ -15,6 +15,7 @@ use Erp\Core\Config;
 use Erp\Core\Router;
 use Erp\Http\InMemoryRedirector;
 use Erp\Controller\AuthController;
+use Erp\Controller\CustomerController;
 use Erp\Controller\UserController;
 use Erp\Controller\DashboardController;
 use Erp\Controller\MaterialController;
@@ -32,6 +33,11 @@ use Erp\Controller\BomController;
 use Erp\Purchase\InMemoryPurchaseOrderRepository;
 use Erp\Purchase\PurchaseOrderService;
 use Erp\Controller\PurchaseController;
+use Erp\Customer\InMemoryCustomerRepository;
+use Erp\Customer\CustomerService;
+use Erp\Sales\InMemorySalesOrderRepository;
+use Erp\Sales\SalesOrderService;
+use Erp\Controller\SalesOrderController;
 use Erp\Supplier\InMemorySupplierRepository;
 use Erp\Supplier\SupplierService;
 use Erp\Controller\SupplierController;
@@ -916,6 +922,136 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/suppliers?status=1', $redirector->lastLocation());
         $this->assertSame(0, $service->list()[0]['is_active']);
+    }
+
+    public function testCustomerServiceCreatesSearchesUpdatesAndTogglesStatus(): void
+    {
+        $service = new CustomerService(new InMemoryCustomerRepository());
+
+        $customer = $service->create([
+            'code' => 'CUS-001',
+            'name' => '上海客户',
+            'contact_name' => '王五',
+            'phone' => '13700000000',
+        ]);
+        $updated = $service->update($customer['id'], [
+            'code' => 'CUS-001',
+            'name' => '上海客户有限公司',
+            'contact_name' => '赵六',
+            'phone' => '13600000000',
+        ]);
+        $disabled = $service->setActive($customer['id'], false);
+
+        $this->assertSame('CUS-001', $customer['code']);
+        $this->assertSame('上海客户有限公司', $updated['name']);
+        $this->assertSame(1, count($service->search('上海')));
+        $this->assertSame(0, $disabled['is_active']);
+    }
+
+    public function testCustomerPageShowsListCreateFormAndStatusActions(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new CustomerService(new InMemoryCustomerRepository());
+        $service->create([
+            'code' => 'CUS-001',
+            'name' => '上海客户',
+            'contact_name' => '王五',
+            'phone' => '13700000000',
+        ]);
+        $controller = new CustomerController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('客户档案', $html);
+        $this->assertStringContains('新增客户', $html);
+        $this->assertStringContains('CUS-001', $html);
+        $this->assertStringContains('上海客户', $html);
+        $this->assertStringContains('action="/erp/customers"', $html);
+        $this->assertStringContains('action="/erp/customers/status"', $html);
+        $this->assertPrimaryNavigation($html);
+    }
+
+    public function testSalesOrderServiceCreatesOrderForCustomerAndProduct(): void
+    {
+        $customers = new InMemoryCustomerRepository();
+        $customer = $customers->create([
+            'code' => 'CUS-001',
+            'name' => '上海客户',
+            'contact_name' => '',
+            'phone' => '',
+        ]);
+        $materials = new InMemoryMaterialRepository();
+        $product = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $service = new SalesOrderService(new InMemorySalesOrderRepository(), $customers, $materials);
+
+        $order = $service->create([
+            'order_no' => 'SO-001',
+            'customer_id' => (string) $customer['id'],
+            'product_material_id' => (string) $product['id'],
+            'quantity' => '20',
+            'due_date' => '2026-08-31',
+        ]);
+
+        $this->assertSame('SO-001', $order['order_no']);
+        $this->assertSame('上海客户', $order['customer_name']);
+        $this->assertSame('FG-001', $order['product_material_code']);
+        $this->assertSame('20', $order['quantity']);
+        $this->assertSame('draft', $order['status']);
+    }
+
+    public function testSalesOrderPageShowsListAndCreateForm(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $customers = new InMemoryCustomerRepository();
+        $customer = $customers->create([
+            'code' => 'CUS-001',
+            'name' => '上海客户',
+            'contact_name' => '',
+            'phone' => '',
+        ]);
+        $materials = new InMemoryMaterialRepository();
+        $product = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $service = new SalesOrderService(new InMemorySalesOrderRepository(), $customers, $materials);
+        $service->create([
+            'order_no' => 'SO-001',
+            'customer_id' => (string) $customer['id'],
+            'product_material_id' => (string) $product['id'],
+            'quantity' => '20',
+            'due_date' => '2026-08-31',
+        ]);
+        $controller = new SalesOrderController(
+            $service,
+            new CustomerService($customers),
+            new MaterialService($materials),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->index();
+
+        $this->assertStringContains('销售订单', $html);
+        $this->assertStringContains('新增销售订单', $html);
+        $this->assertStringContains('SO-001', $html);
+        $this->assertStringContains('上海客户', $html);
+        $this->assertStringContains('FG-001', $html);
+        $this->assertStringContains('action="/erp/sales-orders"', $html);
+        $this->assertPrimaryNavigation($html);
     }
 
     public function testBomServiceCreatesBomWithComponentsAndCalculatesRequirements(): void
@@ -2766,8 +2902,10 @@ final class FoundationTest extends TestCase
             'href="/erp/">仪表盘',
             'href="/erp/materials">物料档案',
             'href="/erp/warehouses">仓库档案',
+            'href="/erp/customers">客户档案',
             'href="/erp/suppliers">供应商档案',
             'href="/erp/boms">BOM 管理',
+            'href="/erp/sales-orders">销售订单',
             'href="/erp/purchases">采购订单',
             'href="/erp/work-orders">生产工单',
             'href="/erp/planning/shortages">缺料分析',

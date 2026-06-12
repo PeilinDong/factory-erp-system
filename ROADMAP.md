@@ -22,7 +22,9 @@ Current implemented modules:
 
 - Material master.
 - Warehouse master.
+- Customer master.
 - Supplier master.
+- Sales order foundation.
 - Project-based BOM management foundation.
 - Purchase order foundation.
 - Production work order foundation.
