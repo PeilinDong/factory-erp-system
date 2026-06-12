@@ -184,6 +184,7 @@ $router->post('/sales-orders/plan', [$salesOrders, 'plan']);
 $router->get('/purchases', [$purchases, 'index']);
 $router->post('/purchases', [$purchases, 'store']);
 $router->post('/purchases/receive', [$purchases, 'receive']);
+$router->post('/purchases/return', [$purchases, 'return']);
 $router->get('/work-orders', [$workOrders, 'index']);
 $router->post('/work-orders', [$workOrders, 'store']);
 $router->post('/work-orders/issue', [$workOrders, 'issue']);

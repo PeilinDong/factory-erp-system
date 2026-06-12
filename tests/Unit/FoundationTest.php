@@ -1855,6 +1855,79 @@ final class FoundationTest extends TestCase
         throw new \RuntimeException('Expected duplicate purchase receive to be rejected');
     }
 
+    public function testPurchaseOrderServiceReturnsReceivedMaterialsToSupplier(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-006',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $service->receive($order['id'], $warehouse['id'], 'LOT-PO-006', $inventory, '10');
+
+        $transaction = $service->returnToSupplier($order['id'], $warehouse['id'], 'LOT-PO-006', $inventory, '3');
+
+        $this->assertSame('outbound', $transaction['transaction_type']);
+        $this->assertSame('3', $transaction['quantity']);
+        $this->assertSame('PO-006', $transaction['reference_no']);
+        $this->assertSame('LOT-PO-006', $transaction['batch_no']);
+        $this->assertSame('7', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('partial', $service->list()[0]['status']);
+    }
+
+    public function testPurchaseOrderServiceRejectsReturnBeyondReceivedQuantity(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-007',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '15',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $service->receive($order['id'], $warehouse['id'], 'LOT-PO-007', $inventory, '4');
+
+        try {
+            $service->returnToSupplier($order['id'], $warehouse['id'], 'LOT-PO-007', $inventory, '5');
+        } catch (\InvalidArgumentException $exception) {
+            $this->assertStringContains('received quantity', $exception->getMessage());
+            $this->assertSame('4', $inventory->stockBalance($material['id'], $warehouse['id']));
+            return;
+        }
+
+        throw new \RuntimeException('Expected purchase return beyond received quantity to be rejected');
+    }
+
     public function testPurchaseControllerReceivesOrderAndRedirects(): void
     {
         App::setBasePath('/erp');
@@ -1902,6 +1975,57 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/purchases?received=1', $redirector->lastLocation());
         $this->assertSame('3', $inventory->stockBalance($material['id'], $warehouse['id']));
+        $this->assertSame('partial', $service->list()[0]['status']);
+    }
+
+    public function testPurchaseControllerReturnsOrderQuantityAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-008',
+            'material_id' => (string) $material['id'],
+            'quantity' => '6',
+            'unit_price' => '10',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $service->receive($order['id'], $warehouse['id'], 'LOT-PO-008', $inventory, '6');
+        $redirector = new InMemoryRedirector();
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            $inventory,
+            $session,
+            $redirector,
+        );
+
+        $controller->return([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $order['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'batch_no' => 'LOT-PO-008',
+            'returned_quantity' => '2',
+        ]);
+
+        $this->assertSame('/erp/purchases?returned=1', $redirector->lastLocation());
+        $this->assertSame('4', $inventory->stockBalance($material['id'], $warehouse['id']));
         $this->assertSame('partial', $service->list()[0]['status']);
     }
 

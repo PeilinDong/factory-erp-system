@@ -68,17 +68,17 @@ Acceptance criteria:
 - Prevent duplicate or invalid transitions.
 - Add tests for the main transition paths.
 
-## 7. Add Purchase Return Workflow
+## 7. Add Purchase Approval And Close Workflow
 
-Allow received purchase materials to be returned to suppliers with traceable inventory movement.
+Strengthen purchase order control after receipt and return foundations are in place.
 
 Acceptance criteria:
 
-- Add purchase return action for received or partially received purchase orders.
-- Record outbound inventory transactions linked to the purchase order.
-- Prevent returning more than the received quantity.
-- Preserve batch number and reference number for traceability.
-- Add tests for valid returns and invalid over-returns.
+- Add approve, cancel, and close actions for purchase orders.
+- Restrict receipt and return actions by purchase order status.
+- Prevent closing orders with invalid remaining quantities.
+- Show clear status labels in the purchase order list.
+- Add service and controller tests for valid and invalid transitions.
 
 ## 8. Add Work Order Return And Supplement Issue
 

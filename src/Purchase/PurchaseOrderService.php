@@ -130,6 +130,45 @@ final class PurchaseOrderService
     }
 
     /**
+     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}
+     */
+    public function returnToSupplier(
+        int $id,
+        int $warehouseId,
+        string $batchNo,
+        InventoryService $inventory,
+        string $returnedQuantity,
+    ): array {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if (count($order['items']) !== 1) {
+            throw new \InvalidArgumentException('purchase return currently supports single-item purchase orders');
+        }
+
+        if ($warehouseId <= 0) {
+            throw new \InvalidArgumentException('warehouse must exist');
+        }
+
+        $item = $order['items'][0];
+        $quantity = $this->returnQuantity($order['order_no'], $item['material_id'], $inventory, $returnedQuantity);
+        $transaction = $inventory->record([
+            'material_id' => (string) $item['material_id'],
+            'warehouse_id' => (string) $warehouseId,
+            'transaction_type' => 'outbound',
+            'quantity' => $quantity,
+            'reference_no' => $order['order_no'],
+            'batch_no' => $batchNo,
+        ]);
+
+        $this->orders->setStatus($id, $this->receivedAll($order, $inventory) ? 'received' : 'partial');
+
+        return $transaction;
+    }
+
+    /**
      * @param array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>} $order
      * @param array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string} $item
      */
@@ -176,15 +215,35 @@ final class PurchaseOrderService
         foreach ($inventory->list() as $transaction) {
             if ($transaction['reference_no'] !== $orderNo
                 || $transaction['material_id'] !== $materialId
-                || $transaction['transaction_type'] !== 'inbound'
             ) {
                 continue;
             }
 
-            $received += (float) $transaction['quantity'];
+            $received += $transaction['transaction_type'] === 'outbound'
+                ? -(float) $transaction['quantity']
+                : (float) $transaction['quantity'];
         }
 
         return $received;
+    }
+
+    private function returnQuantity(string $orderNo, int $materialId, InventoryService $inventory, string $returnedQuantity): string
+    {
+        $received = $this->receivedQuantityFor($orderNo, $materialId, $inventory);
+        if ($received <= 0.0) {
+            throw new \InvalidArgumentException('purchase order has no received quantity to return');
+        }
+
+        $rawQuantity = trim($returnedQuantity);
+        if (!preg_match('/^\d+(\.\d{1,6})?$/', $rawQuantity) || (float) $rawQuantity <= 0.0) {
+            throw new \InvalidArgumentException('returned quantity must be greater than zero');
+        }
+
+        if (((float) $rawQuantity - $received) > 0.000001) {
+            throw new \InvalidArgumentException('returned quantity exceeds received quantity');
+        }
+
+        return $this->normalizeNumber($rawQuantity);
     }
 
     /**

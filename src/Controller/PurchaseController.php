@@ -155,6 +155,44 @@ HTML;
         return '';
     }
 
+    /**
+     * @param null|array<string, string> $input
+     */
+    public function return(?array $input = null): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'purchase.receive')) {
+            $this->redirector()->redirect(App::url('/purchases?error=forbidden'));
+            return '';
+        }
+
+        $input ??= $_POST;
+        if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
+            $this->redirector()->redirect(App::url('/purchases?error=csrf'));
+            return '';
+        }
+
+        try {
+            $this->orders->returnToSupplier(
+                (int) ($input['id'] ?? 0),
+                (int) ($input['warehouse_id'] ?? 0),
+                (string) ($input['batch_no'] ?? ''),
+                $this->inventory,
+                (string) ($input['returned_quantity'] ?? ''),
+            );
+            $this->redirector()->redirect(App::url('/purchases?returned=1'));
+        } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
+            $this->redirector()->redirect(App::url('/purchases?error=return'));
+        }
+
+        return '';
+    }
+
     private function message(): string
     {
         if (isset($_GET['created'])) {
@@ -254,12 +292,21 @@ HTML;
                     htmlspecialchars($item['unit_price'], ENT_QUOTES, 'UTF-8'),
                     htmlspecialchars($item['line_amount'], ENT_QUOTES, 'UTF-8'),
                     $this->statusLabel($order['status']),
-                    $this->receiveForm($order, $csrfToken, $warehouseOptions),
+                    $this->purchaseActions($order, $csrfToken, $warehouseOptions),
                 );
             }
         }
 
         return implode('', $rows);
+    }
+
+    /**
+     * @param array{id:int,status:string,order_no:string} $order
+     */
+    private function purchaseActions(array $order, string $csrfToken, string $warehouseOptions): string
+    {
+        return '<div class="row-actions">' . $this->receiveForm($order, $csrfToken, $warehouseOptions)
+            . $this->returnForm($order, $csrfToken, $warehouseOptions) . '</div>';
     }
 
     /**
@@ -284,6 +331,32 @@ HTML;
   <input name="received_quantity" required placeholder="本次数量">
   <input name="batch_no" required value="{$batch}" placeholder="LOT-PO-001">
   <button type="submit">收货入库</button>
+</form>
+HTML;
+    }
+
+    /**
+     * @param array{id:int,status:string,order_no:string} $order
+     */
+    private function returnForm(array $order, string $csrfToken, string $warehouseOptions): string
+    {
+        if ($order['status'] === 'draft') {
+            return '';
+        }
+
+        $action = htmlspecialchars(App::url('/purchases/return'), ENT_QUOTES, 'UTF-8');
+        $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
+        $id = (string) (int) $order['id'];
+        $batch = htmlspecialchars('LOT-' . $order['order_no'], ENT_QUOTES, 'UTF-8');
+
+        return <<<HTML
+<form class="inline-form" method="post" action="{$action}">
+  <input type="hidden" name="csrf_token" value="{$csrf}">
+  <input type="hidden" name="id" value="{$id}">
+  <select name="warehouse_id" required>{$warehouseOptions}</select>
+  <input name="returned_quantity" required placeholder="退货数量">
+  <input name="batch_no" required value="{$batch}" placeholder="LOT-PO-001">
+  <button type="submit">退货出库</button>
 </form>
 HTML;
     }
