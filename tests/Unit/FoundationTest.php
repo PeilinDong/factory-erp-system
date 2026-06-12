@@ -32,6 +32,9 @@ use Erp\Controller\BomController;
 use Erp\Purchase\InMemoryPurchaseOrderRepository;
 use Erp\Purchase\PurchaseOrderService;
 use Erp\Controller\PurchaseController;
+use Erp\Supplier\InMemorySupplierRepository;
+use Erp\Supplier\SupplierService;
+use Erp\Controller\SupplierController;
 use Erp\WorkOrder\InMemoryWorkOrderRepository;
 use Erp\WorkOrder\WorkOrderService;
 use Erp\Controller\WorkOrderController;
@@ -839,6 +842,82 @@ final class FoundationTest extends TestCase
         $this->assertSame(0, $service->list()[0]['is_active']);
     }
 
+    public function testSupplierServiceCreatesSearchesUpdatesAndTogglesStatus(): void
+    {
+        $service = new SupplierService(new InMemorySupplierRepository());
+
+        $supplier = $service->create([
+            'code' => 'SUP-001',
+            'name' => '上海供应商',
+            'contact_name' => '张三',
+            'phone' => '13800000000',
+        ]);
+        $updated = $service->update($supplier['id'], [
+            'code' => 'SUP-001',
+            'name' => '上海供应商有限公司',
+            'contact_name' => '李四',
+            'phone' => '13900000000',
+        ]);
+        $disabled = $service->setActive($supplier['id'], false);
+
+        $this->assertSame('SUP-001', $supplier['code']);
+        $this->assertSame('上海供应商有限公司', $updated['name']);
+        $this->assertSame(1, count($service->search('上海')));
+        $this->assertSame(0, $disabled['is_active']);
+    }
+
+    public function testSupplierPageShowsListCreateFormAndStatusActions(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new SupplierService(new InMemorySupplierRepository());
+        $service->create([
+            'code' => 'SUP-001',
+            'name' => '上海供应商',
+            'contact_name' => '张三',
+            'phone' => '13800000000',
+        ]);
+        $controller = new SupplierController($service, $session, new InMemoryRedirector());
+
+        $html = $controller->index();
+
+        $this->assertStringContains('供应商档案', $html);
+        $this->assertStringContains('新增供应商', $html);
+        $this->assertStringContains('SUP-001', $html);
+        $this->assertStringContains('上海供应商', $html);
+        $this->assertStringContains('action="/erp/suppliers"', $html);
+        $this->assertStringContains('action="/erp/suppliers/status"', $html);
+        $this->assertPrimaryNavigation($html);
+    }
+
+    public function testSupplierControllerStoresAndTogglesStatus(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员']);
+        $service = new SupplierService(new InMemorySupplierRepository());
+        $redirector = new InMemoryRedirector();
+        $controller = new SupplierController($service, $session, $redirector);
+
+        $controller->store([
+            'csrf_token' => $session->csrfToken(),
+            'code' => 'SUP-001',
+            'name' => '上海供应商',
+            'contact_name' => '张三',
+            'phone' => '13800000000',
+        ]);
+        $supplier = $service->list()[0];
+        $controller->status([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $supplier['id'],
+            'is_active' => '0',
+        ]);
+
+        $this->assertSame('/erp/suppliers?status=1', $redirector->lastLocation());
+        $this->assertSame(0, $service->list()[0]['is_active']);
+    }
+
     public function testBomServiceCreatesBomWithComponentsAndCalculatesRequirements(): void
     {
         $materials = new InMemoryMaterialRepository();
@@ -1172,6 +1251,38 @@ final class FoundationTest extends TestCase
         $this->assertSame('MAT-001', $order['items'][0]['material_code']);
         $this->assertSame('125', $order['total_amount']);
         $this->assertSame('draft', $order['status']);
+    }
+
+    public function testPurchaseOrderServiceUsesSupplierMasterWhenSupplierIdIsProvided(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $suppliers = new InMemorySupplierRepository();
+        $supplier = $suppliers->create([
+            'code' => 'SUP-001',
+            'name' => '上海供应商',
+            'contact_name' => '张三',
+            'phone' => '13800000000',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials, $suppliers);
+
+        $order = $service->create([
+            'supplier_id' => (string) $supplier['id'],
+            'order_no' => 'PO-001',
+            'expected_date' => '2026-06-30',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+
+        $this->assertSame((int) $supplier['id'], $order['supplier_id']);
+        $this->assertSame('上海供应商', $order['supplier_name']);
     }
 
     public function testPurchaseOrderServiceRejectsInvalidQuantityAndPrice(): void
@@ -2655,6 +2766,7 @@ final class FoundationTest extends TestCase
             'href="/erp/">仪表盘',
             'href="/erp/materials">物料档案',
             'href="/erp/warehouses">仓库档案',
+            'href="/erp/suppliers">供应商档案',
             'href="/erp/boms">BOM 管理',
             'href="/erp/purchases">采购订单',
             'href="/erp/work-orders">生产工单',

@@ -7,7 +7,7 @@ namespace Erp\Purchase;
 final class InMemoryPurchaseOrderRepository implements PurchaseOrderRepository
 {
     /**
-     * @var array<int, array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>}>
+     * @var array<int, array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>}>
      */
     private array $orders = [];
 
@@ -39,6 +39,7 @@ final class InMemoryPurchaseOrderRepository implements PurchaseOrderRepository
 
         $order = [
             'id' => $orderId,
+            'supplier_id' => (int) ($data['supplier_id'] ?? 0),
             'order_no' => $data['order_no'],
             'supplier_name' => $data['supplier_name'],
             'expected_date' => $data['expected_date'],

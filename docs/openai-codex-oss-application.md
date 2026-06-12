@@ -38,6 +38,7 @@ The repository currently includes:
 - Protected dashboard.
 - Material master.
 - Warehouse master.
+- Supplier master.
 - Inventory transaction entry for inbound, outbound, and adjustment records.
 - Stock balance page and dashboard inventory metrics.
 - BOM, purchase order, production work order, batch traceability, basic material shortage analysis, and purchasing suggestion foundations.

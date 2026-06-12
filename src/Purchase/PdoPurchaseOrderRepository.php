@@ -15,7 +15,7 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
     public function list(): array
     {
         $statement = $this->pdo->query(
-            'SELECT id, order_no, supplier_name, expected_date, status
+            'SELECT id, COALESCE(supplier_id, 0) AS supplier_id, order_no, supplier_name, expected_date, status
              FROM purchase_orders
              ORDER BY id DESC
              LIMIT 100'
@@ -32,7 +32,7 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
     public function find(int $id): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, order_no, supplier_name, expected_date, status
+            'SELECT id, COALESCE(supplier_id, 0) AS supplier_id, order_no, supplier_name, expected_date, status
              FROM purchase_orders
              WHERE id = :id
              LIMIT 1'
@@ -54,10 +54,11 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
         $this->pdo->beginTransaction();
         try {
             $statement = $this->pdo->prepare(
-                'INSERT INTO purchase_orders (order_no, supplier_name, expected_date, status, created_at)
-                 VALUES (:order_no, :supplier_name, :expected_date, :status, CURRENT_TIMESTAMP)'
+                'INSERT INTO purchase_orders (supplier_id, order_no, supplier_name, expected_date, status, created_at)
+                 VALUES (:supplier_id, :order_no, :supplier_name, :expected_date, :status, CURRENT_TIMESTAMP)'
             );
             $statement->execute([
+                'supplier_id' => ((int) ($data['supplier_id'] ?? 0)) > 0 ? (int) $data['supplier_id'] : null,
                 'order_no' => $data['order_no'],
                 'supplier_name' => $data['supplier_name'],
                 'expected_date' => $data['expected_date'] !== '' ? $data['expected_date'] : null,
@@ -112,12 +113,13 @@ final class PdoPurchaseOrderRepository implements PurchaseOrderRepository
 
     /**
      * @param array<string, mixed> $row
-     * @return array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>}
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>}
      */
     private function mapOrderRow(array $row): array
     {
         return [
             'id' => (int) $row['id'],
+            'supplier_id' => (int) ($row['supplier_id'] ?? 0),
             'order_no' => (string) $row['order_no'],
             'supplier_name' => (string) $row['supplier_name'],
             'expected_date' => (string) ($row['expected_date'] ?? ''),

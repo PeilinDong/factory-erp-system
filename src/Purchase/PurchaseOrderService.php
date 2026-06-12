@@ -6,17 +6,19 @@ namespace Erp\Purchase;
 
 use Erp\Inventory\InventoryService;
 use Erp\Material\MaterialRepository;
+use Erp\Supplier\SupplierRepository;
 
 final class PurchaseOrderService
 {
     public function __construct(
         private readonly PurchaseOrderRepository $orders,
         private readonly MaterialRepository $materials,
+        private readonly ?SupplierRepository $suppliers = null,
     ) {
     }
 
     /**
-     * @return array<int, array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}>
+     * @return array<int, array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}>
      */
     public function list(): array
     {
@@ -24,7 +26,7 @@ final class PurchaseOrderService
     }
 
     /**
-     * @return null|array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     * @return null|array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
      */
     public function find(int $id): ?array
     {
@@ -35,14 +37,23 @@ final class PurchaseOrderService
 
     /**
      * @param array<string, mixed> $data
-     * @return array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
      */
     public function create(array $data): array
     {
+        $supplierId = (int) ($data['supplier_id'] ?? 0);
         $supplierName = trim((string) ($data['supplier_name'] ?? ''));
         $orderNo = strtoupper(trim((string) ($data['order_no'] ?? '')));
         $expectedDate = trim((string) ($data['expected_date'] ?? ''));
         $items = $this->normalizeItems($data);
+
+        if ($supplierId > 0) {
+            $supplier = $this->suppliers?->find($supplierId);
+            if ($supplier === null || (int) $supplier['is_active'] !== 1) {
+                throw new \InvalidArgumentException('supplier must exist and be active');
+            }
+            $supplierName = $supplier['name'];
+        }
 
         if ($supplierName === '') {
             throw new \InvalidArgumentException('supplier name must not be empty');
@@ -63,6 +74,7 @@ final class PurchaseOrderService
         }
 
         return $this->enrich($this->orders->create([
+            'supplier_id' => $supplierId,
             'order_no' => $orderNo,
             'supplier_name' => $supplierName,
             'expected_date' => $expectedDate,
@@ -173,7 +185,7 @@ final class PurchaseOrderService
 
     /**
      * @param array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,quantity:string,unit_price:string}>} $order
-     * @return array{id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
      */
     private function enrich(array $order): array
     {
@@ -197,6 +209,7 @@ final class PurchaseOrderService
 
         return [
             'id' => $order['id'],
+            'supplier_id' => (int) ($order['supplier_id'] ?? 0),
             'order_no' => $order['order_no'],
             'supplier_name' => $order['supplier_name'],
             'expected_date' => $order['expected_date'],

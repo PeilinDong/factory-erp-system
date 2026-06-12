@@ -34,6 +34,7 @@ Implemented so far:
 - Protected dashboard.
 - Material master page.
 - Warehouse master page.
+- Supplier master page.
 - Project-based BOM management foundation.
 - Purchase order foundation with purchase receipt into inventory.
 - Production work order foundation with material issue and finished-goods receipt.
@@ -55,7 +56,7 @@ Not implemented yet:
 
 - Excel import/export for master data.
 - Multi-level BOM expansion, BOM approval, and effective-date control.
-- Partial purchase receipt, purchase return, and supplier master data.
+- Partial purchase receipt, purchase return, and customer master data.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
 - Data-scope permission controls and operation audit logs.

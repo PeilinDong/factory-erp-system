@@ -15,6 +15,7 @@ use Erp\Http\Redirector;
 use Erp\Inventory\InventoryService;
 use Erp\Material\MaterialService;
 use Erp\Purchase\PurchaseOrderService;
+use Erp\Supplier\SupplierService;
 use Erp\Warehouse\WarehouseService;
 
 final class PurchaseController
@@ -26,6 +27,7 @@ final class PurchaseController
         private readonly InventoryService $inventory,
         private readonly ?SessionStore $session = null,
         private readonly ?Redirector $redirector = null,
+        private readonly ?SupplierService $suppliers = null,
     ) {
     }
 
@@ -40,6 +42,7 @@ final class PurchaseController
         $csrf = htmlspecialchars($session->csrfToken(), ENT_QUOTES, 'UTF-8');
         $action = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
         $materialOptions = $this->materialOptions($this->materials->list());
+        $supplierField = $this->supplierField();
         $warehouseOptions = $this->warehouseOptions($this->warehouses->list());
         $rows = $this->orderRows($this->orders->list(), $session->csrfToken(), $warehouseOptions);
         $message = $this->message();
@@ -58,7 +61,7 @@ final class PurchaseController
       <form class="material-form" method="post" action="{$action}">
         <input type="hidden" name="csrf_token" value="{$csrf}">
         <label>采购单号 <input name="order_no" required placeholder="PO-001"></label>
-        <label>供应商 <input name="supplier_name" required placeholder="上海供应商"></label>
+        {$supplierField}
         <label>预计到货日 <input name="expected_date" placeholder="2026-07-01"></label>
         <label>采购物料
           <select name="material_id" required>{$materialOptions}</select>
@@ -183,6 +186,31 @@ HTML;
             htmlspecialchars($material['code'], ENT_QUOTES, 'UTF-8'),
             htmlspecialchars($material['name'], ENT_QUOTES, 'UTF-8'),
         ), $materials));
+    }
+
+    private function supplierField(): string
+    {
+        if ($this->suppliers === null) {
+            return '<label>供应商 <input name="supplier_name" required placeholder="上海供应商"></label>';
+        }
+
+        $suppliers = array_values(array_filter(
+            $this->suppliers->list(),
+            static fn (array $supplier): bool => (int) $supplier['is_active'] === 1,
+        ));
+
+        if ($suppliers === []) {
+            return '<label>供应商 <input name="supplier_name" required placeholder="请先维护供应商档案"></label>';
+        }
+
+        $options = implode('', array_map(static fn (array $supplier): string => sprintf(
+            '<option value="%s">%s - %s</option>',
+            (string) (int) $supplier['id'],
+            htmlspecialchars($supplier['code'], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($supplier['name'], ENT_QUOTES, 'UTF-8'),
+        ), $suppliers));
+
+        return '<label>供应商 <select name="supplier_id" required>' . $options . '</select></label>';
     }
 
     /**

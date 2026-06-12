@@ -8,6 +8,7 @@ return [
         'users',
         'materials',
         'warehouses',
+        'suppliers',
         'boms',
         'bom_items',
         'purchase_orders',
@@ -50,6 +51,15 @@ return [
             is_active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "CREATE TABLE IF NOT EXISTS suppliers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            code VARCHAR(64) NOT NULL UNIQUE,
+            name VARCHAR(190) NOT NULL,
+            contact_name VARCHAR(120) NULL,
+            phone VARCHAR(64) NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS boms (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             project_code VARCHAR(64) NOT NULL DEFAULT 'STANDARD',
@@ -73,12 +83,14 @@ return [
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         "CREATE TABLE IF NOT EXISTS purchase_orders (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            supplier_id BIGINT UNSIGNED NULL,
             order_no VARCHAR(64) NOT NULL UNIQUE,
             supplier_name VARCHAR(190) NOT NULL,
             expected_date DATE NULL,
             status VARCHAR(32) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        "ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS supplier_id BIGINT UNSIGNED NULL AFTER id",
         "CREATE TABLE IF NOT EXISTS purchase_order_items (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             purchase_order_id BIGINT UNSIGNED NOT NULL,
