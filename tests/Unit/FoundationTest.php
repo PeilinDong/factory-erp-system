@@ -1580,6 +1580,94 @@ final class FoundationTest extends TestCase
         throw new \RuntimeException('Expected invalid purchase quantity to be rejected');
     }
 
+    public function testPurchaseOrderServiceApprovesCancelsAndClosesOrders(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+
+        $approved = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-STATUS-1',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+        $cancelled = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-STATUS-2',
+            'material_id' => (string) $material['id'],
+            'quantity' => '5',
+            'unit_price' => '12.5',
+        ]);
+
+        $this->assertSame('approved', $service->approve($approved['id'])['status']);
+        $this->assertSame('cancelled', $service->cancel($cancelled['id'])['status']);
+
+        $service->receive($approved['id'], $warehouse['id'], 'LOT-PO-STATUS-1', $inventory, '10');
+        $this->assertSame('closed', $service->close($approved['id'])['status']);
+    }
+
+    public function testPurchaseOrderServiceRejectsReceiptForClosedOrCancelledOrders(): void
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => 'Raw Material Warehouse',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $cancelled = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-CANCELLED',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+        $closed = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-CLOSED',
+            'material_id' => (string) $material['id'],
+            'quantity' => '10',
+            'unit_price' => '12.5',
+        ]);
+        $service->cancel($cancelled['id']);
+        $service->approve($closed['id']);
+        $service->receive($closed['id'], $warehouse['id'], 'LOT-PO-CLOSED', $inventory, '10');
+        $service->close($closed['id']);
+
+        foreach ([$cancelled, $closed] as $order) {
+            try {
+                $service->receive($order['id'], $warehouse['id'], 'LOT-' . $order['order_no'], $inventory, '1');
+            } catch (\InvalidArgumentException $exception) {
+                $this->assertStringContains('cannot be received', $exception->getMessage());
+                continue;
+            }
+
+            throw new \RuntimeException('Expected receipt to be rejected for closed or cancelled purchase order');
+        }
+    }
+
     public function testPurchasePageShowsListAndCreateFormForLoggedInUser(): void
     {
         App::setBasePath('/erp');
@@ -1624,6 +1712,7 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('125', $html);
         $this->assertStringContains('action="/erp/purchases"', $html);
         $this->assertStringContains('action="/erp/purchases/receive"', $html);
+        $this->assertStringContains('action="/erp/purchases/status"', $html);
         $this->assertStringContains('name="unit_price"', $html);
         $this->assertStringContains('name="batch_no"', $html);
         $this->assertStringContains('name="received_quantity"', $html);
@@ -1705,6 +1794,48 @@ final class FoundationTest extends TestCase
 
         $this->assertSame('/erp/purchases?error=forbidden', $redirector->lastLocation());
         $this->assertSame(0, count($service->list()));
+    }
+
+    public function testPurchaseControllerChangesOrderStatusAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => 'Admin']);
+        $materials = new InMemoryMaterialRepository();
+        $material = $materials->create([
+            'code' => 'MAT-001',
+            'name' => 'Material A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $service = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials);
+        $order = $service->create([
+            'supplier_name' => 'Supplier A',
+            'order_no' => 'PO-APPROVE',
+            'material_id' => (string) $material['id'],
+            'quantity' => '5',
+            'unit_price' => '20',
+        ]);
+        $redirector = new InMemoryRedirector();
+        $warehouses = new InMemoryWarehouseRepository();
+        $controller = new PurchaseController(
+            $service,
+            new MaterialService($materials),
+            new WarehouseService($warehouses),
+            new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses),
+            $session,
+            $redirector,
+        );
+
+        $controller->status([
+            'csrf_token' => $session->csrfToken(),
+            'id' => (string) $order['id'],
+            'action' => 'approve',
+        ]);
+
+        $this->assertSame('/erp/purchases?status=1', $redirector->lastLocation());
+        $this->assertSame('approved', $service->list()[0]['status']);
     }
 
     public function testPurchaseOrderServiceReceivesOrderToInventory(): void

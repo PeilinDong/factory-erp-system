@@ -120,6 +120,44 @@ HTML;
     /**
      * @param null|array<string, string> $input
      */
+    public function status(?array $input = null): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'purchase.manage')) {
+            $this->redirector()->redirect(App::url('/purchases?error=forbidden'));
+            return '';
+        }
+
+        $input ??= $_POST;
+        if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
+            $this->redirector()->redirect(App::url('/purchases?error=csrf'));
+            return '';
+        }
+
+        try {
+            $id = (int) ($input['id'] ?? 0);
+            match ((string) ($input['action'] ?? '')) {
+                'approve' => $this->orders->approve($id),
+                'cancel' => $this->orders->cancel($id),
+                'close' => $this->orders->close($id),
+                default => throw new \InvalidArgumentException('purchase status action is invalid'),
+            };
+            $this->redirector()->redirect(App::url('/purchases?status=1'));
+        } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
+            $this->redirector()->redirect(App::url('/purchases?error=status'));
+        }
+
+        return '';
+    }
+
+    /**
+     * @param null|array<string, string> $input
+     */
     public function receive(?array $input = null): string
     {
         $session = $this->session();
@@ -305,8 +343,46 @@ HTML;
      */
     private function purchaseActions(array $order, string $csrfToken, string $warehouseOptions): string
     {
-        return '<div class="row-actions">' . $this->receiveForm($order, $csrfToken, $warehouseOptions)
+        return '<div class="row-actions">' . $this->statusForms($order, $csrfToken)
+            . $this->receiveForm($order, $csrfToken, $warehouseOptions)
             . $this->returnForm($order, $csrfToken, $warehouseOptions) . '</div>';
+    }
+
+    /**
+     * @param array{id:int,status:string,order_no:string} $order
+     */
+    private function statusForms(array $order, string $csrfToken): string
+    {
+        $actions = match ($order['status']) {
+            'draft' => [
+                ['approve', '审批'],
+                ['cancel', '取消'],
+            ],
+            'approved' => [
+                ['cancel', '取消'],
+            ],
+            'partial', 'received' => [
+                ['close', '关闭'],
+            ],
+            default => [],
+        };
+
+        if ($actions === []) {
+            return '';
+        }
+
+        $actionUrl = htmlspecialchars(App::url('/purchases/status'), ENT_QUOTES, 'UTF-8');
+        $csrf = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
+        $id = (string) (int) $order['id'];
+
+        return implode('', array_map(static fn (array $action): string => sprintf(
+            '<form class="inline-form" method="post" action="%s"><input type="hidden" name="csrf_token" value="%s"><input type="hidden" name="id" value="%s"><input type="hidden" name="action" value="%s"><button type="submit">%s</button></form>',
+            $actionUrl,
+            $csrf,
+            $id,
+            htmlspecialchars($action[0], ENT_QUOTES, 'UTF-8'),
+            htmlspecialchars($action[1], ENT_QUOTES, 'UTF-8'),
+        ), $actions));
     }
 
     /**
@@ -314,7 +390,7 @@ HTML;
      */
     private function receiveForm(array $order, string $csrfToken, string $warehouseOptions): string
     {
-        if ($order['status'] === 'received') {
+        if (in_array($order['status'], ['received', 'cancelled', 'closed'], true)) {
             return '<span class="muted">已收货</span>';
         }
 
@@ -340,7 +416,7 @@ HTML;
      */
     private function returnForm(array $order, string $csrfToken, string $warehouseOptions): string
     {
-        if ($order['status'] === 'draft') {
+        if (in_array($order['status'], ['draft', 'cancelled', 'closed'], true)) {
             return '';
         }
 
@@ -363,6 +439,15 @@ HTML;
 
     private function statusLabel(string $status): string
     {
+        return match ($status) {
+            'draft' => '草稿',
+            'approved' => '已审批',
+            'partial' => '部分收货',
+            'received' => '已收货',
+            'cancelled' => '已取消',
+            'closed' => '已关闭',
+            default => htmlspecialchars($status, ENT_QUOTES, 'UTF-8'),
+        };
         return [
             'draft' => '草稿',
             'partial' => '部分收货',

@@ -68,17 +68,17 @@ Acceptance criteria:
 - Prevent duplicate or invalid transitions.
 - Add tests for the main transition paths.
 
-## 7. Add Purchase Approval And Close Workflow
+## 7. Add Purchase Workflow Audit Trail
 
-Strengthen purchase order control after receipt and return foundations are in place.
+Record important purchase order lifecycle actions for accountability.
 
 Acceptance criteria:
 
-- Add approve, cancel, and close actions for purchase orders.
-- Restrict receipt and return actions by purchase order status.
-- Prevent closing orders with invalid remaining quantities.
-- Show clear status labels in the purchase order list.
-- Add service and controller tests for valid and invalid transitions.
+- Record create, approve, cancel, receive, return, and close events.
+- Store actor, action, reference document, timestamp, and summary.
+- Show recent audit entries on the purchase order page or audit page.
+- Keep audit entries append-only.
+- Add service and controller tests for representative events.
 
 ## 8. Add Work Order Return And Supplement Issue
 

@@ -59,7 +59,7 @@ Not implemented yet:
 - Excel import/export for master data.
 - Multi-level BOM expansion, BOM approval, and effective-date control.
 - Sales delivery tracking and stronger sales order status control.
-- Purchase approval, close/cancel, and stronger purchase status workflow.
+- Fine-grained purchase workflow audit trail and permission policy.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
 - Data-scope permission controls and operation audit logs.
@@ -159,7 +159,7 @@ Near-term priorities:
 
 1. Strengthen work order and purchase order status control.
 2. Excel import/export for material, warehouse, and BOM data.
-3. Add purchase approval, close/cancel, and stronger purchase status workflow.
+3. Add purchase workflow audit trail and finer-grained permission policy.
 4. Add cost visibility for work order material usage.
 5. Add data-scope permissions and operation audit logs.
 

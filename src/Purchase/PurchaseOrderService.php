@@ -99,6 +99,10 @@ final class PurchaseOrderService
             throw new \InvalidArgumentException('purchase order must exist');
         }
 
+        if (in_array($order['status'], ['cancelled', 'closed'], true)) {
+            throw new \InvalidArgumentException('purchase order cannot be received in current status');
+        }
+
         if ($order['status'] === 'received') {
             throw new \InvalidArgumentException('purchase order is already received');
         }
@@ -130,6 +134,57 @@ final class PurchaseOrderService
     }
 
     /**
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    public function approve(int $id): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if ($order['status'] !== 'draft') {
+            throw new \InvalidArgumentException('only draft purchase orders can be approved');
+        }
+
+        return $this->enrich($this->orders->setStatus($id, 'approved'));
+    }
+
+    /**
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    public function cancel(int $id): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if (!in_array($order['status'], ['draft', 'approved'], true)) {
+            throw new \InvalidArgumentException('purchase order cannot be cancelled in current status');
+        }
+
+        return $this->enrich($this->orders->setStatus($id, 'cancelled'));
+    }
+
+    /**
+     * @return array{id:int,supplier_id:int,order_no:string,supplier_name:string,expected_date:string,status:string,total_amount:string,items:array<int, array{id:int,purchase_order_id:int,material_id:int,material_code:string,material_name:string,quantity:string,unit_price:string,line_amount:string}>}
+     */
+    public function close(int $id): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if (!in_array($order['status'], ['partial', 'received'], true)) {
+            throw new \InvalidArgumentException('purchase order cannot be closed in current status');
+        }
+
+        return $this->enrich($this->orders->setStatus($id, 'closed'));
+    }
+
+    /**
      * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,batch_no:string,occurred_at:string}
      */
     public function returnToSupplier(
@@ -142,6 +197,10 @@ final class PurchaseOrderService
         $order = $this->find($id);
         if ($order === null) {
             throw new \InvalidArgumentException('purchase order must exist');
+        }
+
+        if (in_array($order['status'], ['cancelled', 'closed'], true)) {
+            throw new \InvalidArgumentException('purchase order cannot be returned in current status');
         }
 
         if (count($order['items']) !== 1) {
