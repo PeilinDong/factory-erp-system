@@ -36,6 +36,7 @@ use Erp\WorkOrder\InMemoryWorkOrderRepository;
 use Erp\WorkOrder\WorkOrderService;
 use Erp\Controller\WorkOrderController;
 use Erp\Planning\MaterialShortageService;
+use Erp\Planning\PurchaseSuggestionService;
 use Erp\Controller\PlanningController;
 use Tests\TestCase;
 
@@ -2158,8 +2159,11 @@ final class FoundationTest extends TestCase
             'transaction_type' => 'inbound',
             'quantity' => '8',
         ]);
+        $shortages = new MaterialShortageService($workOrders, $inventory);
         $controller = new PlanningController(
-            new MaterialShortageService($workOrders, $inventory),
+            $shortages,
+            new PurchaseSuggestionService($shortages),
+            new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials),
             $session,
             new InMemoryRedirector(),
         );
@@ -2172,6 +2176,96 @@ final class FoundationTest extends TestCase
         $this->assertStringContains('WO-001', $html);
         $this->assertStringContains('12', $html);
         $this->assertPrimaryNavigation($html);
+    }
+
+    public function testPurchaseSuggestionServiceGeneratesSuggestionsFromShortages(): void
+    {
+        [$materials, $shortages] = $this->shortageFixture();
+        $service = new PurchaseSuggestionService($shortages);
+
+        $suggestions = $service->list();
+
+        $this->assertSame(1, count($suggestions));
+        $this->assertSame('MAT-001', $suggestions[0]['material_code']);
+        $this->assertSame('原料A', $suggestions[0]['material_name']);
+        $this->assertSame('12', $suggestions[0]['suggested_quantity']);
+        $this->assertSame('WO-001', $suggestions[0]['source_orders']);
+        $this->assertSame((int) $materials['component']['id'], $suggestions[0]['material_id']);
+    }
+
+    public function testPurchaseSuggestionServiceConvertsSuggestionToPurchaseOrderDraft(): void
+    {
+        [$materials, $shortages] = $this->shortageFixture();
+        $suggestions = new PurchaseSuggestionService($shortages);
+        $purchases = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials['repository']);
+
+        $order = $suggestions->convertToPurchaseOrder([
+            'material_id' => (string) $materials['component']['id'],
+            'order_no' => 'PO-SUG-001',
+            'supplier_name' => '建议供应商',
+            'expected_date' => '2026-07-31',
+            'unit_price' => '0',
+        ], $purchases);
+
+        $this->assertSame('PO-SUG-001', $order['order_no']);
+        $this->assertSame('draft', $order['status']);
+        $this->assertSame('MAT-001', $order['items'][0]['material_code']);
+        $this->assertSame('12', $order['items'][0]['quantity']);
+        $this->assertSame('0', $order['items'][0]['unit_price']);
+    }
+
+    public function testPlanningPurchaseSuggestionPageShowsSuggestionsAndConversionForm(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'admin@goenn.online', 'name' => '管理员', 'role_code' => 'admin']);
+        [$materials, $shortages] = $this->shortageFixture();
+        $controller = new PlanningController(
+            $shortages,
+            new PurchaseSuggestionService($shortages),
+            new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials['repository']),
+            $session,
+            new InMemoryRedirector(),
+        );
+
+        $html = $controller->purchaseSuggestions();
+
+        $this->assertStringContains('采购建议', $html);
+        $this->assertStringContains('MAT-001', $html);
+        $this->assertStringContains('12', $html);
+        $this->assertStringContains('action="/erp/planning/purchase-suggestions/convert"', $html);
+        $this->assertStringContains('name="supplier_name"', $html);
+        $this->assertPrimaryNavigation($html);
+    }
+
+    public function testPlanningControllerConvertsSuggestionAndRedirects(): void
+    {
+        App::setBasePath('/erp');
+        $session = new InMemorySessionStore();
+        $session->setUser(['id' => 1, 'email' => 'buyer@goenn.online', 'name' => '采购员', 'role_code' => 'purchasing']);
+        [$materials, $shortages] = $this->shortageFixture();
+        $purchases = new PurchaseOrderService(new InMemoryPurchaseOrderRepository(), $materials['repository']);
+        $redirector = new InMemoryRedirector();
+        $controller = new PlanningController(
+            $shortages,
+            new PurchaseSuggestionService($shortages),
+            $purchases,
+            $session,
+            $redirector,
+        );
+
+        $controller->convertPurchaseSuggestion([
+            'csrf_token' => $session->csrfToken(),
+            'material_id' => (string) $materials['component']['id'],
+            'order_no' => 'PO-SUG-001',
+            'supplier_name' => '建议供应商',
+            'expected_date' => '',
+            'unit_price' => '0',
+        ]);
+
+        $this->assertSame('/erp/planning/purchase-suggestions?converted=1', $redirector->lastLocation());
+        $this->assertSame(1, count($purchases->list()));
+        $this->assertSame('12', $purchases->list()[0]['items'][0]['quantity']);
     }
 
     public function testInventoryServiceRecordsTransactionsAndCalculatesStockBalance(): void
@@ -2565,6 +2659,7 @@ final class FoundationTest extends TestCase
             'href="/erp/purchases">采购订单',
             'href="/erp/work-orders">生产工单',
             'href="/erp/planning/shortages">缺料分析',
+            'href="/erp/planning/purchase-suggestions">采购建议',
             'href="/erp/inventory">库存流水',
             'href="/erp/inventory/balances">库存余额',
             'href="/erp/inventory/trace">批次追溯',
@@ -2573,6 +2668,67 @@ final class FoundationTest extends TestCase
         ] as $link) {
             $this->assertStringContains($link, $html);
         }
+    }
+
+    /**
+     * @return array{0: array{repository: InMemoryMaterialRepository, component: array{id:int,code:string,name:string,specification:string,base_unit:string,material_type:string,is_active:int}}, 1: MaterialShortageService}
+     */
+    private function shortageFixture(): array
+    {
+        $materials = new InMemoryMaterialRepository();
+        $warehouses = new InMemoryWarehouseRepository();
+        $parent = $materials->create([
+            'code' => 'FG-001',
+            'name' => '成品A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'manufactured',
+        ]);
+        $component = $materials->create([
+            'code' => 'MAT-001',
+            'name' => '原料A',
+            'specification' => '',
+            'base_unit' => 'pcs',
+            'material_type' => 'purchased',
+        ]);
+        $warehouse = $warehouses->create([
+            'code' => 'WH-001',
+            'name' => '原料仓',
+        ]);
+        $bomService = new BomService(new InMemoryBomRepository(), $materials);
+        $bom = $bomService->create([
+            'project_code' => 'PRJ-A',
+            'project_name' => '项目A',
+            'parent_material_id' => (string) $parent['id'],
+            'version' => 'v1',
+            'items' => [
+                [
+                    'component_material_id' => (string) $component['id'],
+                    'quantity' => '2',
+                ],
+            ],
+        ]);
+        $workOrders = new WorkOrderService(new InMemoryWorkOrderRepository(), $bomService);
+        $workOrders->create([
+            'order_no' => 'WO-001',
+            'bom_id' => (string) $bom['id'],
+            'planned_quantity' => '10',
+        ]);
+        $inventory = new InventoryService(new InMemoryInventoryTransactionRepository(), $materials, $warehouses);
+        $inventory->record([
+            'material_id' => (string) $component['id'],
+            'warehouse_id' => (string) $warehouse['id'],
+            'transaction_type' => 'inbound',
+            'quantity' => '8',
+        ]);
+
+        return [
+            [
+                'repository' => $materials,
+                'component' => $component,
+            ],
+            new MaterialShortageService($workOrders, $inventory),
+        ];
     }
 
     private function removeDirectory(string $directory): void

@@ -13,16 +13,16 @@ Acceptance criteria:
 - Add tests for at least purchase receipt, inventory adjustment, and user status changes.
 - Add a protected audit log page for administrators.
 
-## 2. Generate Purchasing Suggestions From Shortage Analysis
+## 2. Persist Purchasing Suggestions And Review Decisions
 
-Convert material shortage rows into draft purchasing suggestions so users can move from "what is missing" to "what should be purchased".
+The current early-alpha implementation generates purchasing suggestions from shortage analysis and can convert them into purchase order drafts. The next step is to persist review decisions so planners and buyers can track what was accepted, changed, dismissed, or already converted.
 
 Acceptance criteria:
 
-- Add a purchasing suggestion service backed by shortage analysis.
-- Show material, shortage quantity, suggested quantity, and source work orders.
-- Let an authorized purchasing user convert a suggestion into a purchase order draft.
-- Add tests for suggestion generation and conversion.
+- Add a `purchase_suggestions` table or equivalent persistence model.
+- Track suggested quantity, adjusted quantity, source work orders, status, reviewer, and converted purchase order reference.
+- Support accept, dismiss, adjust quantity, and convert actions.
+- Add tests for status transitions and duplicate conversion prevention.
 
 ## 3. Add Excel Import For Materials And Warehouses
 

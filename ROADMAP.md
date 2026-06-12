@@ -84,7 +84,8 @@ Current status:
 
 - Single-level project BOM creation and requirement calculation are implemented.
 - Basic shortage analysis for planned work orders is implemented.
-- Multi-level expansion, effective-date control, and purchasing suggestion generation are not implemented yet.
+- Purchasing suggestion draft generation from shortage analysis is implemented.
+- Multi-level expansion and effective-date control are not implemented yet.
 
 Why this phase matters:
 
@@ -104,6 +105,7 @@ Goals:
 Current status:
 
 - Purchase order creation and full receipt into inventory are implemented.
+- Purchasing suggestions can be converted into purchase order drafts.
 - Work order creation, full material issue, and full finished-goods receipt are implemented.
 - Partial receipt, purchase return, work order return, supplement issue, and richer status control are not implemented yet.
 

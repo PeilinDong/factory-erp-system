@@ -15,6 +15,7 @@ final class Sidebar
         $purchases = htmlspecialchars(App::url('/purchases'), ENT_QUOTES, 'UTF-8');
         $workOrders = htmlspecialchars(App::url('/work-orders'), ENT_QUOTES, 'UTF-8');
         $shortages = htmlspecialchars(App::url('/planning/shortages'), ENT_QUOTES, 'UTF-8');
+        $purchaseSuggestions = htmlspecialchars(App::url('/planning/purchase-suggestions'), ENT_QUOTES, 'UTF-8');
         $inventory = htmlspecialchars(App::url('/inventory'), ENT_QUOTES, 'UTF-8');
         $balances = htmlspecialchars(App::url('/inventory/balances'), ENT_QUOTES, 'UTF-8');
         $trace = htmlspecialchars(App::url('/inventory/trace'), ENT_QUOTES, 'UTF-8');
@@ -44,6 +45,7 @@ HTML;
     <a href="{$purchases}">采购订单</a>
     <a href="{$workOrders}">生产工单</a>
     <a href="{$shortages}">缺料分析</a>
+    <a href="{$purchaseSuggestions}">采购建议</a>
     <a href="{$inventory}">库存流水</a>
     <a href="{$balances}">库存余额</a>
     <a href="{$trace}">批次追溯</a>

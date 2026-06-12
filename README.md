@@ -41,6 +41,7 @@ Implemented so far:
 - Stock balance page by material and warehouse.
 - Batch traceability page.
 - Basic material shortage analysis for planned work orders.
+- Purchasing suggestion page generated from shortage analysis, with conversion to purchase order drafts.
 - User management foundation with administrator, general manager, supervisor, planner, warehouse, and purchasing roles; enable/disable actions; and role checks for key operations.
 - Dashboard inventory metrics backed by inventory transactions.
 - MariaDB-compatible foundation migrations.
@@ -54,7 +55,6 @@ Not implemented yet:
 
 - Excel import/export for master data.
 - Multi-level BOM expansion, BOM approval, and effective-date control.
-- Purchasing suggestions generated from shortage analysis.
 - Partial purchase receipt, purchase return, and supplier master data.
 - Work order return, supplement issue, partial completion, and stronger status control.
 - Cost reports.
@@ -155,7 +155,7 @@ Near-term priorities:
 
 1. Strengthen work order and purchase order status control.
 2. Excel import/export for material, warehouse, and BOM data.
-3. Convert shortage analysis into purchasing suggestions.
+3. Add partial purchase receipt and purchase status workflow.
 4. Add cost visibility for work order material usage.
 5. Add data-scope permissions and operation audit logs.
 
