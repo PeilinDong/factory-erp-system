@@ -74,7 +74,7 @@ Good near-term tasks include:
 1. Operation audit logs for critical ERP actions.
 2. Excel import/export for master data and inventory balances.
 3. Purchase workflow audit trail and finer-grained permission policy.
-4. Work order status workflow with return and supplement issue support.
+4. Work order partial completion, reporting, close/cancel, and stronger status workflow.
 5. Basic work order material cost summaries.
 6. Data-scope permissions by warehouse or document type.
 7. Installer, upgrade, backup, and restore guidance.

@@ -113,7 +113,8 @@ Current status:
 - Work order creation, full material issue, and full finished-goods receipt are implemented.
 - Purchase return foundation is implemented.
 - Purchase approval, cancellation, close, partial receipt, full receipt, and return foundations are implemented.
-- Work order return, supplement issue, and richer status control are not implemented yet.
+- Work order material return and supplement issue foundations are implemented.
+- Work order partial completion, reporting, close/cancel, and richer status control are not implemented yet.
 
 Why this phase matters:
 

@@ -184,6 +184,72 @@ HTML;
         return '';
     }
 
+    /**
+     * @param null|array<string, string> $input
+     */
+    public function returnMaterial(?array $input = null): string
+    {
+        return $this->materialCorrection($input, 'return');
+    }
+
+    /**
+     * @param null|array<string, string> $input
+     */
+    public function supplementIssue(?array $input = null): string
+    {
+        return $this->materialCorrection($input, 'supplement');
+    }
+
+    /**
+     * @param null|array<string, string> $input
+     */
+    private function materialCorrection(?array $input, string $type): string
+    {
+        $session = $this->session();
+        if ($session->user() === null) {
+            $this->redirector()->redirect(App::url('/login'));
+            return '';
+        }
+
+        if (!PermissionService::can($session->user(), 'work_order.issue')) {
+            $this->redirector()->redirect(App::url('/work-orders?error=forbidden'));
+            return '';
+        }
+
+        $input ??= $_POST;
+        if (!$session->verifyCsrf((string) ($input['csrf_token'] ?? ''))) {
+            $this->redirector()->redirect(App::url('/work-orders?error=csrf'));
+            return '';
+        }
+
+        try {
+            if ($type === 'return') {
+                $this->orders->returnMaterial(
+                    (int) ($input['id'] ?? 0),
+                    (int) ($input['material_id'] ?? 0),
+                    (int) ($input['warehouse_id'] ?? 0),
+                    (string) ($input['quantity'] ?? ''),
+                    $this->inventory,
+                );
+                $this->redirector()->redirect(App::url('/work-orders?returned=1'));
+                return '';
+            }
+
+            $this->orders->supplementIssue(
+                (int) ($input['id'] ?? 0),
+                (int) ($input['material_id'] ?? 0),
+                (int) ($input['warehouse_id'] ?? 0),
+                (string) ($input['quantity'] ?? ''),
+                $this->inventory,
+            );
+            $this->redirector()->redirect(App::url('/work-orders?supplemented=1'));
+        } catch (\InvalidArgumentException|\RuntimeException|\PDOException) {
+            $this->redirector()->redirect(App::url('/work-orders?error=correction'));
+        }
+
+        return '';
+    }
+
     private function message(): string
     {
         if (isset($_GET['created'])) {
@@ -196,6 +262,14 @@ HTML;
 
         if (isset($_GET['completed'])) {
             return '<p class="success">完工入库已生成。</p>';
+        }
+
+        if (isset($_GET['returned'])) {
+            return '<p class="success">工单退料入库已生成。</p>';
+        }
+
+        if (isset($_GET['supplemented'])) {
+            return '<p class="success">工单补料出库已生成。</p>';
         }
 
         if (isset($_GET['error'])) {

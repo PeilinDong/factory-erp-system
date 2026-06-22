@@ -189,6 +189,8 @@ $router->post('/purchases/return', [$purchases, 'return']);
 $router->get('/work-orders', [$workOrders, 'index']);
 $router->post('/work-orders', [$workOrders, 'store']);
 $router->post('/work-orders/issue', [$workOrders, 'issue']);
+$router->post('/work-orders/return', [$workOrders, 'returnMaterial']);
+$router->post('/work-orders/supplement', [$workOrders, 'supplementIssue']);
 $router->post('/work-orders/complete', [$workOrders, 'complete']);
 $router->get('/planning/shortages', [$planning, 'shortages']);
 $router->get('/planning/purchase-suggestions', [$planning, 'purchaseSuggestions']);

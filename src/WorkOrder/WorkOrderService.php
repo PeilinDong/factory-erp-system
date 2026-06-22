@@ -140,6 +140,89 @@ final class WorkOrderService
     }
 
     /**
+     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}
+     */
+    public function returnMaterial(
+        int $id,
+        int $materialId,
+        int $warehouseId,
+        string $quantity,
+        InventoryService $inventory,
+    ): array {
+        $order = $this->correctionOrder($id);
+        $this->validateCorrectionInput($order, $materialId, $warehouseId, $quantity);
+
+        return $inventory->record([
+            'material_id' => (string) $materialId,
+            'warehouse_id' => (string) $warehouseId,
+            'transaction_type' => 'inbound',
+            'quantity' => $this->normalizeQuantity($quantity),
+            'reference_no' => $order['order_no'],
+        ]);
+    }
+
+    /**
+     * @return array{id:int,material_id:int,warehouse_id:int,transaction_type:string,quantity:string,reference_no:string,occurred_at:string}
+     */
+    public function supplementIssue(
+        int $id,
+        int $materialId,
+        int $warehouseId,
+        string $quantity,
+        InventoryService $inventory,
+    ): array {
+        $order = $this->correctionOrder($id);
+        $this->validateCorrectionInput($order, $materialId, $warehouseId, $quantity);
+
+        return $inventory->record([
+            'material_id' => (string) $materialId,
+            'warehouse_id' => (string) $warehouseId,
+            'transaction_type' => 'outbound',
+            'quantity' => $this->normalizeQuantity($quantity),
+            'reference_no' => $order['order_no'],
+        ]);
+    }
+
+    /**
+     * @return array{id:int,order_no:string,bom_id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
+     */
+    private function correctionOrder(int $id): array
+    {
+        $order = $this->find($id);
+        if ($order === null) {
+            throw new \InvalidArgumentException('work order must exist');
+        }
+
+        if ($order['status'] !== 'issued') {
+            throw new \InvalidArgumentException('work order must be issued before material correction');
+        }
+
+        return $order;
+    }
+
+    /**
+     * @param array{id:int,requirements:array<int, array{component_material_id:int}>} $order
+     */
+    private function validateCorrectionInput(array $order, int $materialId, int $warehouseId, string $quantity): void
+    {
+        if ($warehouseId <= 0) {
+            throw new \InvalidArgumentException('warehouse must exist');
+        }
+
+        if (!preg_match('/^\d+(\.\d{1,6})?$/', trim($quantity)) || (float) $quantity <= 0.0) {
+            throw new \InvalidArgumentException('quantity must be greater than zero');
+        }
+
+        foreach ($order['requirements'] as $requirement) {
+            if ((int) $requirement['component_material_id'] === $materialId) {
+                return;
+            }
+        }
+
+        throw new \InvalidArgumentException('material must be a work order component');
+    }
+
+    /**
      * @param array{id:int,order_no:string,bom_id:int,planned_quantity:string,due_date:string,status:string} $order
      * @return array{id:int,order_no:string,bom_id:int,project_code:string,project_name:string,parent_material_id:int,parent_material_code:string,parent_material_name:string,planned_quantity:string,due_date:string,status:string,requirements:array<int, array{component_material_id:int,component_material_code:string,component_material_name:string,required_quantity:string}>}
      */

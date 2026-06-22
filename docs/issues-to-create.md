@@ -80,17 +80,17 @@ Acceptance criteria:
 - Keep audit entries append-only.
 - Add service and controller tests for representative events.
 
-## 8. Add Work Order Return And Supplement Issue
+## 8. Add Work Order Partial Completion And Close Workflow
 
-Support common shop-floor corrections after material issue.
+Strengthen production execution after material issue, return, supplement issue, and finished-goods receipt foundations are in place.
 
 Acceptance criteria:
 
-- Add material return transaction from work order back into inventory.
-- Add supplement issue transaction for extra material usage.
-- Keep source work order reference numbers.
-- Add permission checks for warehouse/admin roles.
-- Add tests for stock balance impact.
+- Support partial finished-goods completion quantities.
+- Add close and cancel actions with valid status restrictions.
+- Prevent material issue corrections after close or cancel.
+- Show clear status labels for partial completion and close.
+- Add service and controller tests for valid and invalid transitions.
 
 ## 9. Add Basic Work Order Material Cost Summary
 

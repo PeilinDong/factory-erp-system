@@ -60,7 +60,7 @@ Not implemented yet:
 - Multi-level BOM expansion, BOM approval, and effective-date control.
 - Sales delivery tracking and stronger sales order status control.
 - Fine-grained purchase workflow audit trail and permission policy.
-- Work order return, supplement issue, partial completion, and stronger status control.
+- Work order partial completion, reporting, close/cancel, and stronger status control.
 - Cost reports.
 - Data-scope permission controls and operation audit logs.
 - Production hardening, installer flow, and upgrade tooling.
